@@ -6,7 +6,7 @@ import Toolbar from './components/Toolbar.vue'
 <template>
   <div class="app">
     <header class="app-header">
-      <h1>Easy UML</h1>
+      <h1>PupupuDiagram</h1>
       <Toolbar />
     </header>
     <main class="app-main">
