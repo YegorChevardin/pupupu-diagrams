@@ -6,7 +6,7 @@
       :x2="arrow.endX"
       :y2="arrow.endY"
       :stroke="isSelected ? '#0078d4' : (arrow.stroke || '#000000')"
-      :stroke-width="isSelected ? 3 : (arrow.strokeWidth || 1)"
+      :stroke-width="isSelected ? Math.max(1.5, 3 / props.zoom) : Math.max(0.5, (arrow.strokeWidth || 1) / props.zoom)"
       :marker-end="isSelected ? 'url(#arrowhead-selected)' : getArrowMarker(arrow.stroke)"
       @click.stop="$emit('select', arrow, $event)"
       @mousedown.stop="$emit('startMove', arrow, $event)"
@@ -17,20 +17,20 @@
       <circle
         :cx="arrow.startX"
         :cy="arrow.startY"
-        r="4"
+        :r="Math.max(2, 4 / props.zoom)"
         fill="#0078d4"
         stroke="white"
-        stroke-width="1"
+        :stroke-width="Math.max(0.5, 1 / props.zoom)"
         class="arrow-handle"
         @mousedown="$emit('startDrag', arrow, 'start', $event)"
       />
       <circle
         :cx="arrow.endX"
         :cy="arrow.endY"
-        r="4"
+        :r="Math.max(2, 4 / props.zoom)"
         fill="#0078d4"
         stroke="white"
-        stroke-width="1"
+        :stroke-width="Math.max(0.5, 1 / props.zoom)"
         class="arrow-handle"
         @mousedown="$emit('startDrag', arrow, 'end', $event)"
       />
@@ -44,9 +44,12 @@ import type { Arrow } from '../../stores/diagram'
 interface Props {
   arrow: Arrow
   isSelected: boolean
+  zoom?: number
 }
 
-defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  zoom: 1
+})
 defineEmits<{
   select: [arrow: Arrow, event: MouseEvent]
   startMove: [arrow: Arrow, event: MouseEvent]

@@ -29,9 +29,6 @@
       <button class="tool-btn" @click="openFile" title="Import from File">
         📁
       </button>
-      <span class="auto-save-indicator" title="Auto-saved to browser storage">
-        ✓ Auto-saved
-      </span>
     </div>
   </div>
 </template>
@@ -145,13 +142,5 @@ const loadFromFile = (event: Event) => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.auto-save-indicator {
-  font-size: 0.75rem;
-  color: #28a745;
-  margin-left: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-weight: 500;
-}
+
 </style>

@@ -2,14 +2,14 @@
   <g>
     <rect
       v-if="shape.type === 'rectangle' && isSelected"
-      :x="shape.x - 2"
-      :y="shape.y - 2"
-      :width="shape.width + 4"
-      :height="shape.height + 4"
+      :x="shape.x - Math.max(1, 2 / props.zoom)"
+      :y="shape.y - Math.max(1, 2 / props.zoom)"
+      :width="shape.width + Math.max(2, 4 / props.zoom)"
+      :height="shape.height + Math.max(2, 4 / props.zoom)"
       fill="none"
       stroke="#0078d4"
-      stroke-width="2"
-      stroke-dasharray="4,4"
+      :stroke-width="Math.max(1, 2 / props.zoom)"
+      :stroke-dasharray="`${Math.max(2, 4 / props.zoom)},${Math.max(2, 4 / props.zoom)}`"
     />
     
     <rect
@@ -20,18 +20,18 @@
       :height="shape.height"
       :fill="shape.fill || 'white'"
       :stroke="isSelected ? '#0078d4' : '#cccccc'"
-      :stroke-width="isSelected ? 2 : 1"
+      :stroke-width="isSelected ? Math.max(1, 2 / props.zoom) : Math.max(0.5, 1 / props.zoom)"
       @click="$emit('select', shape, $event)"
       @dblclick="$emit('editText', shape)"
     />
     
     <path
       v-if="shape.type === 'diamond' && isSelected"
-      :d="getDiamondOutlinePath(shape)"
+      :d="getDiamondOutlinePath(shape, props.zoom)"
       fill="none"
       stroke="#0078d4"
-      stroke-width="2"
-      stroke-dasharray="4,4"
+      :stroke-width="Math.max(1, 2 / props.zoom)"
+      :stroke-dasharray="`${Math.max(2, 4 / props.zoom)},${Math.max(2, 4 / props.zoom)}`"
     />
     
     <path
@@ -39,22 +39,22 @@
       :d="getDiamondPath(shape)"
       :fill="shape.fill || 'white'"
       :stroke="isSelected ? '#0078d4' : '#cccccc'"
-      :stroke-width="isSelected ? 2 : 1"
+      :stroke-width="isSelected ? Math.max(1, 2 / props.zoom) : Math.max(0.5, 1 / props.zoom)"
       @click="$emit('select', shape, $event)"
       @dblclick="$emit('editText', shape)"
     />
     
     <rect
       v-if="shape.type === 'text' && isSelected"
-      :x="shape.x - 4"
-      :y="shape.y - (shape.fontSize ?? 14) - 2"
-      :width="((shape.text?.length || 20) * (shape.fontSize ?? 14) * 0.6) + 8"
-      :height="(shape.fontSize ?? 14) + 6"
+      :x="shape.x - Math.max(2, 4 / props.zoom)"
+      :y="shape.y - (shape.fontSize ?? 14) - Math.max(1, 2 / props.zoom)"
+      :width="((shape.text?.length || 20) * (shape.fontSize ?? 14) * 0.6) + Math.max(4, 8 / props.zoom)"
+      :height="(shape.fontSize ?? 14) + Math.max(3, 6 / props.zoom)"
       fill="rgba(0, 120, 212, 0.2)"
       stroke="#0078d4"
-      stroke-width="1"
-      stroke-dasharray="2,2"
-      rx="2"
+      :stroke-width="Math.max(0.5, 1 / props.zoom)"
+      :stroke-dasharray="`${Math.max(1, 2 / props.zoom)},${Math.max(1, 2 / props.zoom)}`"
+      :rx="Math.max(1, 2 / props.zoom)"
     />
     
     <text
@@ -108,9 +108,12 @@ import type { Shape } from '../../stores/diagram'
 interface Props {
   shape: Shape
   isSelected: boolean
+  zoom?: number
 }
 
-defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  zoom: 1
+})
 defineEmits<{
   select: [shape: Shape, event: MouseEvent]
   editText: [shape: Shape]
@@ -125,11 +128,12 @@ const getDiamondPath = (shape: Shape) => {
   return `M ${cx} ${cy - hh} L ${cx + hw} ${cy} L ${cx} ${cy + hh} L ${cx - hw} ${cy} Z`
 }
 
-const getDiamondOutlinePath = (shape: Shape) => {
+const getDiamondOutlinePath = (shape: Shape, zoom: number = 1) => {
   const cx = shape.x + shape.width / 2
   const cy = shape.y + shape.height / 2
-  const hw = shape.width / 2 + 2
-  const hh = shape.height / 2 + 2
+  const offset = Math.max(1, 2 / zoom)
+  const hw = shape.width / 2 + offset
+  const hh = shape.height / 2 + offset
   
   return `M ${cx} ${cy - hh} L ${cx + hw} ${cy} L ${cx} ${cy + hh} L ${cx - hw} ${cy} Z`
 }

@@ -19,7 +19,7 @@
       @contextmenu.prevent
     >
       <CanvasBackground />
-      <ArrowMarkers />
+      <ArrowMarkers :zoom="canvasInteraction.zoom.value" />
       
       <g :transform="`translate(${canvasInteraction.panX.value}, ${canvasInteraction.panY.value}) scale(${canvasInteraction.zoom.value})`">
         <template v-for="element in allElementsSorted" :key="element.id">
@@ -27,6 +27,7 @@
             v-if="element.elementType === 'arrow'"
             :arrow="element as any"
             :is-selected="(element as any).selected || selection.selectedArrowIds.value.includes(element.id)"
+            :zoom="canvasInteraction.zoom.value"
             @select="handleArrowSelect"
             @start-move="handleArrowStartMove"
             @start-drag="handleArrowStartDrag"
@@ -36,6 +37,7 @@
             v-else
             :shape="element as any"
             :is-selected="(element as any).selected || selection.selectedShapeIds.value.includes(element.id)"
+            :zoom="canvasInteraction.zoom.value"
             @select="handleShapeSelect"
             @edit-text="startTextEdit"
           />
@@ -46,10 +48,12 @@
           :tool="diagramStore.tool"
           :start-point="drawing.startPoint.value"
           :current-point="drawing.currentPoint.value"
+          :zoom="canvasInteraction.zoom.value"
         />
         
         <SelectionHandles
           :selected-shape="selectedShapeForHandles"
+          :zoom="canvasInteraction.zoom.value"
           @start-resize="startResize"
         />
         
@@ -57,6 +61,7 @@
           :is-selecting="selection.isSelecting.value"
           :selection-start="selection.selectionStart.value"
           :selection-end="selection.selectionEnd.value"
+          :zoom="canvasInteraction.zoom.value"
         />
       </g>
     </svg>
@@ -78,7 +83,9 @@
         :visible="showPropertiesPanel"
         :position="propertiesPanelPosition"
         :element-type="selectedElementType"
-        :font-size="selectedShape?.fontSize || selectedArrow?.strokeWidth || 14"
+        :show-text-controls="shouldShowTextControls"
+        :show-shape-controls="shouldShowShapeControls"
+        :font-size="currentFontSizeForPanel"
         :selected-fill="selectedShape?.fill || 'white'"
         :selected-stroke="selectedArrow?.stroke || '#000000'"
         :stroke-width="selectedArrow?.strokeWidth || 1"
@@ -92,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useDiagramStore, type Shape, type Arrow } from '../stores/diagram.js'
 import { useCanvasInteraction } from '../composables/useCanvasInteraction'
 import { useSelection } from '../composables/useSelection'
@@ -139,6 +146,19 @@ const movingArrowOffset = ref({ x: 0, y: 0 })
 const showPropertiesPanel = ref(false)
 const propertiesPanelPosition = ref({ x: 0, y: 0 })
 const editingShape = ref<Shape | null>(null)
+
+watch(() => [selection.selectedShapeIds.value.length, selection.selectedArrowIds.value.length], (counts) => {
+  const [shapeCount, arrowCount] = counts
+  if (shapeCount === 0 && arrowCount === 0) {
+    hidePropertiesPanel()
+  }
+})
+
+watch(() => diagramStore.tool, () => {
+  if (diagramStore.tool !== 'select') {
+    hidePropertiesPanel()
+  }
+})
 
 const handleArrowSelect = (arrow: Arrow, event?: MouseEvent) => {
   selection.selectArrow(arrow, event)
@@ -229,12 +249,14 @@ const handleMouseDown = (event: MouseEvent) => {
     } else {
       if (!event.ctrlKey && !event.metaKey) {
         selection.clearAllSelections()
+        hidePropertiesPanel()
       }
       selection.startSelectionBox(worldPos)
     }
   } else {
     drawing.startDrawing(worldPos)
     selection.clearAllSelections()
+    hidePropertiesPanel()
   }
 }
 
@@ -446,12 +468,33 @@ const selectedElementType = computed(() => {
   return null
 })
 
+const shouldShowTextControls = computed(() => {
+  if (!diagramStore.selectedShape) return false
+  return diagramStore.selectedShape.type === 'text' || 
+         Boolean(diagramStore.selectedShape.text && diagramStore.selectedShape.text.trim())
+})
+
+const shouldShowShapeControls = computed(() => {
+  if (!diagramStore.selectedShape) return false
+  return diagramStore.selectedShape.type !== 'text'
+})
+
 const selectedShape = computed(() => diagramStore.selectedShape)
 const selectedArrow = computed(() => diagramStore.selectedArrow)
 
 const selectedShapeForHandles = computed(() => {
   if (!diagramStore.selectedShape) return null
   return diagramStore.shapes.find(s => s.id === diagramStore.selectedShape?.id) || null
+})
+
+const currentFontSizeForPanel = computed(() => {
+  if (selectedShapeForHandles.value) {
+    return selectedShapeForHandles.value.fontSize || 14
+  }
+  if (selectedArrow.value) {
+    return selectedArrow.value.strokeWidth || 1
+  }
+  return 14
 })
 
 const allElementsSorted = computed(() => {
@@ -497,6 +540,13 @@ const updateSelectedFontSize = (newSize: number) => {
   if (diagramStore.selectedShape) {
     diagramStore.updateShapeFontSize(diagramStore.selectedShape.id, newSize)
   }
+  
+  selection.selectedShapeIds.value.forEach(shapeId => {
+    const shape = diagramStore.shapes.find(s => s.id === shapeId)
+    if (shape && (shape.type === 'text' || shape.text)) {
+      diagramStore.updateShapeFontSize(shapeId, newSize)
+    }
+  })
 }
 
 const updateSelectedFill = (color: string) => {
@@ -583,12 +633,15 @@ onMounted(() => {
         })
         selection.selectedShapeIds.value = []
         selection.selectedArrowIds.value = []
+        hidePropertiesPanel()
         diagramStore.saveToLocalStorage()
       } else {
         diagramStore.deleteSelected()
+        hidePropertiesPanel()
       }
     } else if (event.key === 'Escape') {
       selection.clearAllSelections()
+      hidePropertiesPanel()
     } else if (event.key === 'a' && (event.ctrlKey || event.metaKey)) {
       event.preventDefault()
       selection.selectedShapeIds.value = diagramStore.shapes.map(s => s.id)

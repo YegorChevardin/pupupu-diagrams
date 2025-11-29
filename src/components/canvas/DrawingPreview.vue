@@ -8,8 +8,8 @@
       :height="Math.abs(currentPoint.y - startPoint.y)"
       fill="rgba(33, 150, 243, 0.2)"
       stroke="#2196f3"
-      stroke-width="2"
-      stroke-dasharray="5,5"
+      :stroke-width="Math.max(1, 2 / zoom)"
+      :stroke-dasharray="`${Math.max(3, 5 / zoom)},${Math.max(3, 5 / zoom)}`"
     />
     
     <path
@@ -17,8 +17,8 @@
       :d="getPreviewDiamondPath()"
       fill="rgba(33, 150, 243, 0.2)"
       stroke="#2196f3"
-      stroke-width="2"
-      stroke-dasharray="5,5"
+      :stroke-width="Math.max(1, 2 / zoom)"
+      :stroke-dasharray="`${Math.max(3, 5 / zoom)},${Math.max(3, 5 / zoom)}`"
     />
     
     <line
@@ -28,8 +28,8 @@
       :x2="currentPoint.x"
       :y2="currentPoint.y"
       stroke="#2196f3"
-      stroke-width="2"
-      stroke-dasharray="5,5"
+      :stroke-width="Math.max(1, 2 / zoom)"
+      :stroke-dasharray="`${Math.max(3, 5 / zoom)},${Math.max(3, 5 / zoom)}`"
       marker-end="url(#arrowhead-preview)"
     />
   </g>
@@ -41,9 +41,12 @@ interface Props {
   tool: string
   startPoint: { x: number; y: number }
   currentPoint: { x: number; y: number }
+  zoom?: number
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  zoom: 1
+})
 
 const getPreviewDiamondPath = () => {
   const x = Math.min(props.startPoint.x, props.currentPoint.x)

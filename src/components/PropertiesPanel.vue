@@ -11,7 +11,7 @@
     
     <div class="panel-content">
       <!-- Text Properties -->
-      <div v-if="elementType === 'text'" class="property-group">
+      <div v-if="showTextControls" class="property-group">
         <label class="property-label">Font Size</label>
         <div class="font-size-controls">
           <button @click="decreaseFontSize" class="size-btn">-</button>
@@ -21,7 +21,7 @@
       </div>
       
       <!-- Shape Properties -->
-      <div v-if="elementType === 'shape'" class="property-group">
+      <div v-if="showShapeControls" class="property-group">
         <label class="property-label">Fill Color</label>
         <div class="color-options">
           <div
@@ -85,6 +85,8 @@ interface Props {
   visible: boolean
   position: { x: number; y: number }
   elementType: 'text' | 'shape' | 'arrow' | null
+  showTextControls?: boolean
+  showShapeControls?: boolean
   fontSize?: number
   selectedFill?: string
   selectedStroke?: string
@@ -100,6 +102,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  showTextControls: false,
+  showShapeControls: false,
   fontSize: 14,
   selectedFill: 'white',
   selectedStroke: '#000000',

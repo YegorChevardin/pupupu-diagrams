@@ -2,115 +2,156 @@
   <defs>
     <marker
       id="arrowhead-black"
-      markerWidth="10"
-      markerHeight="7"
-      refX="9"
-      refY="3.5"
+      :markerWidth="markerSize.width"
+      :markerHeight="markerSize.height"
+      :refX="markerSize.refX"
+      :refY="markerSize.refY"
       orient="auto"
+      markerUnits="userSpaceOnUse"
     >
-      <polygon points="0 0, 10 3.5, 0 7" fill="#000000" />
+      <polygon :points="markerPoints" fill="#000000" />
     </marker>
     
     <marker
       id="arrowhead-red"
-      markerWidth="10"
-      markerHeight="7"
-      refX="9"
-      refY="3.5"
+      :markerWidth="markerSize.width"
+      :markerHeight="markerSize.height"
+      :refX="markerSize.refX"
+      :refY="markerSize.refY"
       orient="auto"
+      markerUnits="userSpaceOnUse"
     >
-      <polygon points="0 0, 10 3.5, 0 7" fill="#ff6b6b" />
+      <polygon :points="markerPoints" fill="#ff6b6b" />
     </marker>
     
     <marker
       id="arrowhead-teal"
-      markerWidth="10"
-      markerHeight="7"
-      refX="9"
-      refY="3.5"
+      :markerWidth="markerSize.width"
+      :markerHeight="markerSize.height"
+      :refX="markerSize.refX"
+      :refY="markerSize.refY"
       orient="auto"
+      markerUnits="userSpaceOnUse"
     >
-      <polygon points="0 0, 10 3.5, 0 7" fill="#4ecdc4" />
+      <polygon :points="markerPoints" fill="#4ecdc4" />
     </marker>
     
     <marker
       id="arrowhead-blue"
-      markerWidth="10"
-      markerHeight="7"
-      refX="9"
-      refY="3.5"
+      :markerWidth="markerSize.width"
+      :markerHeight="markerSize.height"
+      :refX="markerSize.refX"
+      :refY="markerSize.refY"
       orient="auto"
+      markerUnits="userSpaceOnUse"
     >
-      <polygon points="0 0, 10 3.5, 0 7" fill="#45b7d1" />
+      <polygon :points="markerPoints" fill="#45b7d1" />
     </marker>
     
     <marker
       id="arrowhead-selected"
-      markerWidth="10"
-      markerHeight="7"
-      refX="9"
-      refY="3.5"
+      :markerWidth="markerSize.width"
+      :markerHeight="markerSize.height"
+      :refX="markerSize.refX"
+      :refY="markerSize.refY"
       orient="auto"
+      markerUnits="userSpaceOnUse"
     >
-      <polygon points="0 0, 10 3.5, 0 7" fill="#0078d4" />
+      <polygon :points="markerPoints" fill="#0078d4" />
     </marker>
     
     <marker
       id="arrowhead-green"
-      markerWidth="10"
-      markerHeight="7"
-      refX="9"
-      refY="3.5"
+      :markerWidth="markerSize.width"
+      :markerHeight="markerSize.height"
+      :refX="markerSize.refX"
+      :refY="markerSize.refY"
       orient="auto"
+      markerUnits="userSpaceOnUse"
     >
-      <polygon points="0 0, 10 3.5, 0 7" fill="#96ceb4" />
+      <polygon :points="markerPoints" fill="#96ceb4" />
     </marker>
     
     <marker
       id="arrowhead-yellow"
-      markerWidth="10"
-      markerHeight="7"
-      refX="9"
-      refY="3.5"
+      :markerWidth="markerSize.width"
+      :markerHeight="markerSize.height"
+      :refX="markerSize.refX"
+      :refY="markerSize.refY"
       orient="auto"
+      markerUnits="userSpaceOnUse"
     >
-      <polygon points="0 0, 10 3.5, 0 7" fill="#feca57" />
+      <polygon :points="markerPoints" fill="#feca57" />
     </marker>
     
     <marker
       id="arrowhead-pink"
-      markerWidth="10"
-      markerHeight="7"
-      refX="9"
-      refY="3.5"
+      :markerWidth="markerSize.width"
+      :markerHeight="markerSize.height"
+      :refX="markerSize.refX"
+      :refY="markerSize.refY"
       orient="auto"
+      markerUnits="userSpaceOnUse"
     >
-      <polygon points="0 0, 10 3.5, 0 7" fill="#ff9ff3" />
+      <polygon :points="markerPoints" fill="#ff9ff3" />
     </marker>
     
     <marker
       id="arrowhead-lightblue"
-      markerWidth="10"
-      markerHeight="7"
-      refX="9"
-      refY="3.5"
+      :markerWidth="markerSize.width"
+      :markerHeight="markerSize.height"
+      :refX="markerSize.refX"
+      :refY="markerSize.refY"
       orient="auto"
+      markerUnits="userSpaceOnUse"
     >
-      <polygon points="0 0, 10 3.5, 0 7" fill="#54a0ff" />
+      <polygon :points="markerPoints" fill="#54a0ff" />
     </marker>
     
     <marker
       id="arrowhead-preview"
-      markerWidth="10"
-      markerHeight="7"
-      refX="9"
-      refY="3.5"
+      :markerWidth="markerSize.width"
+      :markerHeight="markerSize.height"
+      :refX="markerSize.refX"
+      :refY="markerSize.refY"
       orient="auto"
+      markerUnits="userSpaceOnUse"
     >
-      <polygon points="0 0, 10 3.5, 0 7" fill="#2196f3" />
+      <polygon :points="markerPoints" fill="#2196f3" />
     </marker>
   </defs>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
+interface Props {
+  zoom?: number
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  zoom: 1
+})
+
+// Calculate zoom-independent marker size
+const markerSize = computed(() => {
+  const baseWidth = 10
+  const baseHeight = 7
+  const scaledWidth = Math.max(6, baseWidth / props.zoom)
+  const scaledHeight = Math.max(4, baseHeight / props.zoom)
+  
+  return {
+    width: scaledWidth,
+    height: scaledHeight,
+    refX: scaledWidth * 0.9, // 90% of width like original (9/10)
+    refY: scaledHeight * 0.5  // 50% of height like original (3.5/7)
+  }
+})
+
+// Calculate zoom-independent marker points
+const markerPoints = computed(() => {
+  const w = markerSize.value.width
+  const h = markerSize.value.height
+  return `0 0, ${w} ${h/2}, 0 ${h}`
+})
 </script>

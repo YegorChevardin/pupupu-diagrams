@@ -1,17 +1,25 @@
 <template>
   <g v-if="selectedShape">
-    <circle
-      v-for="handle in getSelectionHandles(selectedShape)"
-      :key="handle.type"
-      :cx="handle.x"
-      :cy="handle.y"
-      r="4"
-      fill="#2196f3"
-      stroke="#ffffff"
-      stroke-width="1"
-      :class="['selection-handle', `handle-${handle.type}`]"
-      @mousedown="$emit('startResize', $event, handle.type)"
-    />
+    <g v-for="handle in getSelectionHandles(selectedShape)" :key="handle.type">
+      <circle
+        :cx="handle.x"
+        :cy="handle.y"
+        :r="Math.max(8, 12 / props.zoom)"
+        fill="transparent"
+        :class="['selection-handle-area', `handle-${handle.type}`]"
+        @mousedown.stop="$emit('startResize', $event, handle.type)"
+      />
+      <circle
+        :cx="handle.x"
+        :cy="handle.y"
+        :r="Math.max(3, 4 / props.zoom)"
+        fill="#2196f3"
+        stroke="#ffffff"
+        :stroke-width="Math.max(0.5, 1 / props.zoom)"
+        :class="['selection-handle-visual', `handle-${handle.type}`]"
+        style="pointer-events: none;"
+      />
+    </g>
   </g>
 </template>
 
@@ -20,9 +28,13 @@ import type { Shape } from '../../stores/diagram'
 
 interface Props {
   selectedShape: Shape | null
+  zoom?: number
 }
 
-defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  zoom: 1
+})
+
 defineEmits<{
   startResize: [event: MouseEvent, handleType: string]
 }>()
@@ -40,8 +52,12 @@ const getSelectionHandles = (shape: Shape | null) => {
 </script>
 
 <style scoped>
-.selection-handle {
+.selection-handle-area {
   cursor: pointer;
+}
+
+.selection-handle-visual {
+  pointer-events: none;
 }
 
 .handle-nw {
@@ -60,8 +76,7 @@ const getSelectionHandles = (shape: Shape | null) => {
   cursor: se-resize;
 }
 
-.selection-handle:hover {
+.selection-handle-area:hover + .selection-handle-visual {
   fill: #1976d2;
-  transform: scale(1.2);
 }
 </style>
