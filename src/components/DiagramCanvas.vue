@@ -41,6 +41,13 @@
             @select="handleShapeSelect"
             @edit-text="startTextEdit"
           />
+          
+          <ConnectionDots
+            v-if="element.elementType === 'shape' && ((element as any).selected || selection.selectedShapeIds.value.includes(element.id) || diagramStore.tool === 'arrow')"
+            :shape="element as any"
+            :show-dots="true"
+            :dot-size="4 / canvasInteraction.zoom.value"
+          />
         </template>
         
         <DrawingPreview
@@ -116,6 +123,7 @@ import ShapeRenderer from './canvas/ShapeRenderer.vue'
 import DrawingPreview from './canvas/DrawingPreview.vue'
 import SelectionBox from './canvas/SelectionBox.vue'
 import SelectionHandles from './canvas/SelectionHandles.vue'
+import ConnectionDots from './ConnectionDots.vue'
 
 const diagramStore = useDiagramStore()
 const canvasInteraction = useCanvasInteraction()
@@ -312,6 +320,8 @@ const handleMouseMove = (event: MouseEvent) => {
         if (shape && originalPos) {
           shape.x = originalPos.x + dx
           shape.y = originalPos.y + dy
+          // Update connected arrows for this shape
+          diagramStore.updateConnectedArrows(shapeId)
         }
       })
     }

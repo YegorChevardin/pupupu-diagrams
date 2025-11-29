@@ -27,6 +27,8 @@ export interface Arrow {
   stroke?: string
   strokeWidth?: number
   createdAt?: number
+  startShapeId?: string
+  endShapeId?: string
 }
 
 export const useDiagramStore = defineStore('diagram', () => {
@@ -52,9 +54,116 @@ export const useDiagramStore = defineStore('diagram', () => {
     saveToLocalStorage()
   }
   
+  const findShapeAt = (x: number, y: number, threshold: number = 20): Shape | null => {
+    return shapes.value.find(shape => {
+      if (shape.type === 'text') {
+        const textWidth = (shape.text?.length || 20) * (shape.fontSize ?? 14) * 0.6
+        const textHeight = shape.fontSize ?? 14
+        return x >= shape.x - threshold && 
+               x <= shape.x + textWidth + threshold && 
+               y >= shape.y - textHeight - threshold && 
+               y <= shape.y + threshold
+      } else {
+        return x >= shape.x - threshold && 
+               x <= shape.x + shape.width + threshold && 
+               y >= shape.y - threshold && 
+               y <= shape.y + shape.height + threshold
+      }
+    }) || null
+  }
+
+  const getShapeConnectionPoints = (shape: Shape): Array<{ x: number, y: number, id: string }> => {
+    const points: Array<{ x: number, y: number, id: string }> = []
+    
+    if (shape.type === 'text') {
+      const textWidth = (shape.text?.length || 20) * (shape.fontSize ?? 14) * 0.6
+      const textHeight = shape.fontSize ?? 14
+      const left = shape.x
+      const right = shape.x + textWidth
+      const top = shape.y - textHeight
+      const bottom = shape.y
+      const centerX = shape.x + textWidth / 2
+      const centerY = shape.y - textHeight / 2
+      
+      // 8 connection points: 4 corners + 4 sides
+      points.push(
+        { x: left, y: top, id: 'top-left' },
+        { x: centerX, y: top, id: 'top-center' },
+        { x: right, y: top, id: 'top-right' },
+        { x: right, y: centerY, id: 'right-center' },
+        { x: right, y: bottom, id: 'bottom-right' },
+        { x: centerX, y: bottom, id: 'bottom-center' },
+        { x: left, y: bottom, id: 'bottom-left' },
+        { x: left, y: centerY, id: 'left-center' }
+      )
+    } else {
+      const left = shape.x
+      const right = shape.x + shape.width
+      const top = shape.y
+      const bottom = shape.y + shape.height
+      const centerX = shape.x + shape.width / 2
+      const centerY = shape.y + shape.height / 2
+      
+      // 8 connection points: 4 corners + 4 sides
+      points.push(
+        { x: left, y: top, id: 'top-left' },
+        { x: centerX, y: top, id: 'top-center' },
+        { x: right, y: top, id: 'top-right' },
+        { x: right, y: centerY, id: 'right-center' },
+        { x: right, y: bottom, id: 'bottom-right' },
+        { x: centerX, y: bottom, id: 'bottom-center' },
+        { x: left, y: bottom, id: 'bottom-left' },
+        { x: left, y: centerY, id: 'left-center' }
+      )
+    }
+    
+    return points
+  }
+
+  const getClosestConnectionPoint = (shape: Shape, targetX: number, targetY: number): { x: number, y: number, id: string } => {
+    const points = getShapeConnectionPoints(shape)
+    if (points.length === 0) {
+      // Fallback to shape center if no points
+      return { x: shape.x + (shape.width || 0) / 2, y: shape.y + (shape.height || 0) / 2, id: 'center' }
+    }
+    
+    let closestPoint = points[0]!
+    let minDistance = Math.sqrt(Math.pow(points[0]!.x - targetX, 2) + Math.pow(points[0]!.y - targetY, 2))
+    
+    for (const point of points) {
+      const distance = Math.sqrt(Math.pow(point.x - targetX, 2) + Math.pow(point.y - targetY, 2))
+      if (distance < minDistance) {
+        minDistance = distance
+        closestPoint = point
+      }
+    }
+    
+    return closestPoint
+  }
+
   const addArrow = (arrowData: Omit<Arrow, 'id' | 'selected' | 'createdAt'>) => {
+    let finalArrowData = { ...arrowData }
+    
+    // Check if start point is near a shape
+    const startShape = findShapeAt(arrowData.startX, arrowData.startY)
+    if (startShape) {
+      const connectionPoint = getClosestConnectionPoint(startShape, arrowData.startX, arrowData.startY)
+      finalArrowData.startX = connectionPoint.x
+      finalArrowData.startY = connectionPoint.y
+      finalArrowData.startShapeId = startShape.id
+    }
+    
+    // Check if end point is near a shape
+    const endShape = findShapeAt(arrowData.endX, arrowData.endY)
+    if (endShape) {
+      const connectionPoint = getClosestConnectionPoint(endShape, arrowData.endX, arrowData.endY)
+      finalArrowData.endX = connectionPoint.x
+      finalArrowData.endY = connectionPoint.y
+      finalArrowData.endShapeId = endShape.id
+    }
+
     const arrow: Arrow = {
-      ...arrowData,
+      ...finalArrowData,
       id: generateId(),
       selected: false,
       createdAt: Date.now()
@@ -86,35 +195,69 @@ export const useDiagramStore = defineStore('diagram', () => {
     }
   }
   
+  const updateConnectedArrows = (shapeId: string) => {
+    const shape = shapes.value.find(s => s.id === shapeId)
+    if (!shape) return
+    
+    arrows.value.forEach(arrow => {
+      if (arrow.startShapeId === shapeId) {
+        const connectionPoint = getClosestConnectionPoint(shape, arrow.endX, arrow.endY)
+        arrow.startX = connectionPoint.x
+        arrow.startY = connectionPoint.y
+      }
+      if (arrow.endShapeId === shapeId) {
+        const connectionPoint = getClosestConnectionPoint(shape, arrow.startX, arrow.startY)
+        arrow.endX = connectionPoint.x
+        arrow.endY = connectionPoint.y
+      }
+    })
+  }
+
   const moveShape = (shapeId: string, deltaX: number, deltaY: number) => {
     const shape = shapes.value.find(s => s.id === shapeId)
     if (shape) {
       shape.x += deltaX
       shape.y += deltaY
+      updateConnectedArrows(shapeId)
       saveToLocalStorage()
     }
   }
   
+  const deleteShape = (shapeId: string) => {
+    const index = shapes.value.findIndex(s => s.id === shapeId)
+    if (index > -1) {
+      shapes.value.splice(index, 1)
+      // Remove arrows connected to this shape
+      arrows.value = arrows.value.filter(arrow => 
+        arrow.startShapeId !== shapeId && arrow.endShapeId !== shapeId
+      )
+      if (selectedShape.value?.id === shapeId) {
+        selectedShape.value = null
+      }
+      saveToLocalStorage()
+    }
+  }
+
+  const deleteArrow = (arrowId: string) => {
+    const index = arrows.value.findIndex(a => a.id === arrowId)
+    if (index > -1) {
+      arrows.value.splice(index, 1)
+      if (selectedArrow.value?.id === arrowId) {
+        selectedArrow.value = null
+      }
+      saveToLocalStorage()
+    }
+  }
+
   const deleteSelected = () => {
     let shouldSave = false
     if (selectedShape.value) {
-      const index = shapes.value.findIndex(s => s.id === selectedShape.value!.id)
-      if (index > -1) {
-        shapes.value.splice(index, 1)
-        selectedShape.value = null
-        shouldSave = true
-      }
+      deleteShape(selectedShape.value.id)
+      shouldSave = true
     }
     if (selectedArrow.value) {
-      const index = arrows.value.findIndex(a => a.id === selectedArrow.value!.id)
-      if (index > -1) {
-        arrows.value.splice(index, 1)
-        selectedArrow.value = null
-        shouldSave = true
-      }
-    }
-    if (shouldSave) {
-      saveToLocalStorage()
+      deleteArrow(selectedArrow.value.id)
+      shouldSave = true
     }
   }
   
@@ -194,12 +337,17 @@ export const useDiagramStore = defineStore('diagram', () => {
     selectArrow,
     clearSelection,
     moveShape,
+    updateConnectedArrows,
+    deleteShape,
+    deleteArrow,
     deleteSelected,
     clearCanvas,
     loadDiagram,
     updateShapeText,
     saveToLocalStorage,
     loadFromLocalStorage,
-    updateShapeFontSize
+    updateShapeFontSize,
+    getShapeConnectionPoints,
+    getClosestConnectionPoint
   }
 })
