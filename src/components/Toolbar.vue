@@ -136,15 +136,52 @@ const loadFromFile = (event: Event) => {
   
   if (!file) return
   
+  if (!file.name.endsWith('.json')) {
+    alert('Please select a JSON file')
+    target.value = ''
+    return
+  }
+  
   const reader = new FileReader()
   reader.onload = (e) => {
     try {
-      const data = JSON.parse(e.target?.result as string)
+      const result = e.target?.result as string
+      if (!result) {
+        throw new Error('Empty file')
+      }
+      
+      const data = JSON.parse(result)
+      
+      // Validate data structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid data structure')
+      }
+      
+      // Ensure shapes and arrows arrays exist
+      if (!Array.isArray(data.shapes)) {
+        data.shapes = []
+      }
+      if (!Array.isArray(data.arrows)) {
+        data.arrows = []
+      }
+      
       diagramStore.loadDiagram(data)
+      alert(`Successfully loaded ${data.shapes.length} shapes and ${data.arrows.length} arrows`)
+      
     } catch (error) {
-      alert('Error loading file: Invalid format')
+      console.error('Error loading file:', error)
+      alert('Error loading file: Invalid format or corrupted data')
+    } finally {
+      // Clear the file input so the same file can be loaded again
+      target.value = ''
     }
   }
+  
+  reader.onerror = () => {
+    alert('Error reading file')
+    target.value = ''
+  }
+  
   reader.readAsText(file)
 }
 </script>
