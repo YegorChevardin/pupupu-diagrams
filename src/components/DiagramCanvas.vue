@@ -122,6 +122,8 @@ const isDragging = ref(false)
 const dragStartPoint = ref({ x: 0, y: 0 })
 const originalShapePositions = ref<Map<string, { x: number, y: number }>>(new Map())
 const resizeHandle = ref('')
+const resizeStartPoint = ref({ x: 0, y: 0 })
+const originalShapeSize = ref({ x: 0, y: 0, width: 0, height: 0 })
 
 const isEditingText = ref(false)
 const editingShapeId = ref<string | null>(null)
@@ -174,6 +176,8 @@ const handleArrowStartDrag = (arrow: Arrow, endpoint: 'start' | 'end', event: Mo
 }
 
 const handleMouseDown = (event: MouseEvent) => {
+  if (isResizing.value) return
+  
   const rect = svgCanvas.value!.getBoundingClientRect()
   const screenX = event.clientX - rect.left
   const screenY = event.clientY - rect.top
@@ -202,10 +206,8 @@ const handleMouseDown = (event: MouseEvent) => {
           clickedShape.selected = true
         }
       } else if (selection.selectedShapeIds.value.includes(clickedShape.id)) {
-        // Shape is already selected, start dragging
         isDragging.value = true
         dragStartPoint.value = worldPos
-        // Store original positions for ALL currently selected shapes
         originalShapePositions.value.clear()
         selection.selectedShapeIds.value.forEach(shapeId => {
           const shape = diagramStore.shapes.find(s => s.id === shapeId)
@@ -214,13 +216,11 @@ const handleMouseDown = (event: MouseEvent) => {
           }
         })
       } else {
-        // Select this shape and start dragging immediately
         selection.clearAllSelections()
         diagramStore.selectShape(clickedShape)
         selection.selectedShapeIds.value = [clickedShape.id]
         isDragging.value = true
         dragStartPoint.value = worldPos
-        // Store original position for this shape
         originalShapePositions.value.clear()
         originalShapePositions.value.set(clickedShape.id, { x: clickedShape.x, y: clickedShape.y })
       }
@@ -293,6 +293,37 @@ const handleMouseMove = (event: MouseEvent) => {
         }
       })
     }
+  } else if (isResizing.value && diagramStore.selectedShape) {
+    const dx = worldPos.x - resizeStartPoint.value.x
+    const dy = worldPos.y - resizeStartPoint.value.y
+    const selectedId = diagramStore.selectedShape.id
+    const shape = diagramStore.shapes.find(s => s.id === selectedId)
+    const original = originalShapeSize.value
+    
+    if (!shape) return
+    
+    switch (resizeHandle.value) {
+      case 'nw':
+        shape.x = original.x + dx
+        shape.y = original.y + dy
+        shape.width = Math.max(20, original.width - dx)
+        shape.height = Math.max(20, original.height - dy)
+        break
+      case 'ne':
+        shape.y = original.y + dy
+        shape.width = Math.max(20, original.width + dx)
+        shape.height = Math.max(20, original.height - dy)
+        break
+      case 'sw':
+        shape.x = original.x + dx
+        shape.width = Math.max(20, original.width - dx)
+        shape.height = Math.max(20, original.height + dy)
+        break
+      case 'se':
+        shape.width = Math.max(20, original.width + dx)
+        shape.height = Math.max(20, original.height + dy)
+        break
+    }
   }
 }
 
@@ -326,6 +357,9 @@ const handleMouseUp = (event: MouseEvent) => {
   if (isDragging.value && selection.selectedShapeIds.value.length > 0) {
     diagramStore.saveToLocalStorage()
   }
+  if (isResizing.value) {
+    diagramStore.saveToLocalStorage()
+  }
   isDragging.value = false
   originalShapePositions.value.clear()
   if (isDraggingArrow.value || isMovingArrow.value) {
@@ -345,8 +379,24 @@ const handleMouseUp = (event: MouseEvent) => {
 
 const startResize = (event: MouseEvent, handleType: string) => {
   event.stopPropagation()
+  if (!diagramStore.selectedShape) return
+  
+  const rect = svgCanvas.value!.getBoundingClientRect()
+  const screenX = event.clientX - rect.left
+  const screenY = event.clientY - rect.top
+  const worldPos = canvasInteraction.screenToWorld(screenX, screenY)
+  
   isResizing.value = true
   resizeHandle.value = handleType
+  resizeStartPoint.value = worldPos
+  
+  const shape = diagramStore.selectedShape
+  originalShapeSize.value = {
+    x: shape.x,
+    y: shape.y,
+    width: shape.width,
+    height: shape.height
+  }
 }
 
 const canvasCursor = computed(() => {

@@ -9,7 +9,7 @@
       fill="#2196f3"
       stroke="#ffffff"
       stroke-width="1"
-      class="selection-handle"
+      :class="['selection-handle', `handle-${handle.type}`]"
       @mousedown="$emit('startResize', $event, handle.type)"
     />
   </g>
@@ -42,5 +42,26 @@ const getSelectionHandles = (shape: Shape | null) => {
 <style scoped>
 .selection-handle {
   cursor: pointer;
+}
+
+.handle-nw {
+  cursor: nw-resize;
+}
+
+.handle-ne {
+  cursor: ne-resize;
+}
+
+.handle-sw {
+  cursor: sw-resize;
+}
+
+.handle-se {
+  cursor: se-resize;
+}
+
+.selection-handle:hover {
+  fill: #1976d2;
+  transform: scale(1.2);
 }
 </style>
