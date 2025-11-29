@@ -6,7 +6,7 @@ import Toolbar from './components/Toolbar.vue'
 <template>
   <div class="app">
     <header class="app-header">
-      <h1>PupupuDiagram</h1>
+      <span class="app-title">PupupuDiagram</span>
       <Toolbar />
     </header>
     <main class="app-main">
@@ -20,25 +20,64 @@ import Toolbar from './components/Toolbar.vue'
   height: 100vh;
   display: flex;
   flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: #fafafa;
 }
 
 .app-header {
-  background: #2c3e50;
-  color: white;
-  padding: 1rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e1e5e9;
+  padding: 12px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #34495e;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  min-height: 60px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.app-header h1 {
+@media (max-width: 768px) {
+  .app-header {
+    padding: 8px 12px;
+    min-height: 50px;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px;
+    gap: 8px;
+  }
+}
+
+.app-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a202c;
   margin: 0;
-  font-size: 1.5rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .app-title {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-title {
+    font-size: 16px;
+    text-align: center;
+  }
 }
 
 .app-main {
   flex: 1;
   overflow: hidden;
+  background: #ffffff;
 }
 </style>
