@@ -31,6 +31,8 @@ export interface Arrow {
   createdAt?: number
   startShapeId?: string
   endShapeId?: string
+  isCurved?: boolean
+  controlPoints?: Array<{ x: number, y: number, id: string }>
 }
 
 export const useDiagramStore = defineStore('diagram', () => {
@@ -360,6 +362,98 @@ export const useDiagramStore = defineStore('diagram', () => {
     connectionState.value.startPoint = null
   }
 
+  const convertArrowToCurved = (arrowId: string) => {
+    const arrow = arrows.value.find(a => a.id === arrowId)
+    if (!arrow) return
+
+    if (!arrow.isCurved) {
+      // Add initial control point in the middle
+      const midX = (arrow.startX + arrow.endX) / 2
+      const midY = (arrow.startY + arrow.endY) / 2
+      
+      arrow.isCurved = true
+      arrow.controlPoints = [{
+        x: midX,
+        y: midY,
+        id: generateId()
+      }]
+      saveToLocalStorage()
+    }
+  }
+
+  const addControlPoint = (arrowId: string, afterIndex?: number) => {
+    const arrow = arrows.value.find(a => a.id === arrowId)
+    if (!arrow || !arrow.isCurved || !arrow.controlPoints || arrow.controlPoints.length === 0) return
+
+    const insertIndex = afterIndex !== undefined ? afterIndex + 1 : arrow.controlPoints.length
+    
+    // Calculate position for new control point
+    let newX, newY
+    
+    if (insertIndex === 0 && arrow.controlPoints[0]) {
+      // Insert before first control point
+      newX = (arrow.startX + arrow.controlPoints[0].x) / 2
+      newY = (arrow.startY + arrow.controlPoints[0].y) / 2
+    } else if (insertIndex >= arrow.controlPoints.length) {
+      // Insert after last control point
+      const lastPoint = arrow.controlPoints[arrow.controlPoints.length - 1]
+      if (lastPoint) {
+        newX = (lastPoint.x + arrow.endX) / 2
+        newY = (lastPoint.y + arrow.endY) / 2
+      } else {
+        return
+      }
+    } else {
+      // Insert between two control points
+      const prevPoint = arrow.controlPoints[insertIndex - 1]
+      const nextPoint = arrow.controlPoints[insertIndex]
+      if (prevPoint && nextPoint) {
+        newX = (prevPoint.x + nextPoint.x) / 2
+        newY = (prevPoint.y + nextPoint.y) / 2
+      } else {
+        return
+      }
+    }
+
+    arrow.controlPoints.splice(insertIndex, 0, {
+      x: newX,
+      y: newY,
+      id: generateId()
+    })
+    
+    saveToLocalStorage()
+  }
+
+  const updateControlPoint = (arrowId: string, controlPointId: string, x: number, y: number) => {
+    const arrow = arrows.value.find(a => a.id === arrowId)
+    if (!arrow || !arrow.controlPoints) return
+
+    const controlPoint = arrow.controlPoints.find(cp => cp.id === controlPointId)
+    if (controlPoint) {
+      controlPoint.x = x
+      controlPoint.y = y
+      saveToLocalStorage()
+    }
+  }
+
+  const removeControlPoint = (arrowId: string, controlPointId: string) => {
+    const arrow = arrows.value.find(a => a.id === arrowId)
+    if (!arrow || !arrow.controlPoints) return
+
+    const index = arrow.controlPoints.findIndex(cp => cp.id === controlPointId)
+    if (index > -1) {
+      arrow.controlPoints.splice(index, 1)
+      
+      // If no control points left, convert back to straight arrow
+      if (arrow.controlPoints.length === 0) {
+        arrow.isCurved = false
+        arrow.controlPoints = undefined
+      }
+      
+      saveToLocalStorage()
+    }
+  }
+
   const generateId = () => {
     return Math.random().toString(36).substr(2, 9)
   }
@@ -395,6 +489,10 @@ export const useDiagramStore = defineStore('diagram', () => {
     connectionState,
     startConnection,
     completeConnection,
-    cancelConnection
+    cancelConnection,
+    convertArrowToCurved,
+    addControlPoint,
+    updateControlPoint,
+    removeControlPoint
   }
 })

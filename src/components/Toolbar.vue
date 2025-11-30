@@ -31,6 +31,7 @@
       <button class="tool-btn" @click="openFile" title="Import from File">
         <UploadIcon />
       </button>
+
     </div>
   </div>
 </template>
@@ -183,6 +184,8 @@ const loadFromFile = (event: Event) => {
   
   reader.readAsText(file)
 }
+
+
 </script>
 
 <style scoped>
