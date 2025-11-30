@@ -43,7 +43,7 @@
           />
           
           <ConnectionDots
-            v-if="element.elementType === 'shape' && ((element as any).selected || selection.selectedShapeIds.value.includes(element.id) || diagramStore.tool === 'arrow')"
+            v-if="element.elementType === 'shape' && ((element as any).selected || selection.selectedShapeIds.value.includes(element.id) || diagramStore.tool === 'arrow' || diagramStore.connectionState.isConnecting)"
             :shape="element as any"
             :show-dots="true"
             :dot-size="4 / canvasInteraction.zoom.value"
@@ -650,8 +650,12 @@ onMounted(() => {
         hidePropertiesPanel()
       }
     } else if (event.key === 'Escape') {
-      selection.clearAllSelections()
-      hidePropertiesPanel()
+      if (diagramStore.connectionState.isConnecting) {
+        diagramStore.cancelConnection()
+      } else {
+        selection.clearAllSelections()
+        hidePropertiesPanel()
+      }
     } else if (event.key === 'a' && (event.ctrlKey || event.metaKey)) {
       event.preventDefault()
       selection.selectedShapeIds.value = diagramStore.shapes.map(s => s.id)

@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
+export type Tool = 'select' | 'rectangle' | 'diamond' | 'text' | 'arrow'
+
 export interface Shape {
   id: string
   type: 'rectangle' | 'diamond' | 'text'
@@ -36,9 +38,15 @@ export const useDiagramStore = defineStore('diagram', () => {
   const arrows = ref<Arrow[]>([])
   const selectedShape = ref<Shape | null>(null)
   const selectedArrow = ref<Arrow | null>(null)
-  const tool = ref<string>('select')
+  const tool = ref<Tool>('select')
   
-  const setTool = (newTool: string) => {
+  // Connection state for dot-to-dot arrow creation
+  const connectionState = ref<{
+    isConnecting: boolean
+    startPoint: { x: number, y: number, shapeId: string, dotId: string } | null
+  }>({ isConnecting: false, startPoint: null })
+  
+  const setTool = (newTool: Tool) => {
     tool.value = newTool
     clearSelection()
   }
@@ -317,6 +325,41 @@ export const useDiagramStore = defineStore('diagram', () => {
     }
   }
   
+  const startConnection = (point: { x: number, y: number }, shapeId: string, dotId: string) => {
+    connectionState.value.isConnecting = true
+    connectionState.value.startPoint = { x: point.x, y: point.y, shapeId, dotId }
+  }
+
+  const completeConnection = (endPoint: { x: number, y: number }, endShapeId: string, endDotId: string) => {
+    if (!connectionState.value.startPoint) return
+
+    const startPoint = connectionState.value.startPoint
+    
+    // Don't create arrow if connecting to the same shape
+    if (startPoint.shapeId === endShapeId) {
+      cancelConnection()
+      return
+    }
+
+    // Create arrow between the two connection points
+    const arrowData = {
+      startX: startPoint.x,
+      startY: startPoint.y,
+      endX: endPoint.x,
+      endY: endPoint.y,
+      startShapeId: startPoint.shapeId,
+      endShapeId: endShapeId
+    }
+
+    addArrow(arrowData)
+    cancelConnection()
+  }
+
+  const cancelConnection = () => {
+    connectionState.value.isConnecting = false
+    connectionState.value.startPoint = null
+  }
+
   const generateId = () => {
     return Math.random().toString(36).substr(2, 9)
   }
@@ -348,6 +391,10 @@ export const useDiagramStore = defineStore('diagram', () => {
     loadFromLocalStorage,
     updateShapeFontSize,
     getShapeConnectionPoints,
-    getClosestConnectionPoint
+    getClosestConnectionPoint,
+    connectionState,
+    startConnection,
+    completeConnection,
+    cancelConnection
   }
 })

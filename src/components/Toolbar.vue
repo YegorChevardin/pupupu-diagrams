@@ -37,13 +37,12 @@
 
 <script setup lang="ts">
 import { ref, computed, h } from 'vue'
-import { useDiagramStore } from '../stores/diagram.js'
+import { useDiagramStore, type Tool } from '../stores/diagram.js'
 
 const diagramStore = useDiagramStore()
 
 const fileInput = ref<HTMLInputElement>()
 
-// Modern SVG Icons as components
 const SelectIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2 }, [
   h('path', { d: 'M3 7V5C3 3.89543 3.89543 3 5 3H7' }),
   h('path', { d: 'M21 7V5C21 3.89543 20.1046 3 19 3H17' }),
@@ -96,7 +95,7 @@ const tools = [
 ]
 
 const setTool = (toolId: string) => {
-  diagramStore.setTool(toolId)
+  diagramStore.setTool(toolId as Tool)
 }
 
 const clearCanvas = () => {
