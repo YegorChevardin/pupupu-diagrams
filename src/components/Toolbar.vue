@@ -114,7 +114,8 @@ const saveToFile = () => {
   const data = {
     shapes: diagramStore.shapes,
     arrows: diagramStore.arrows,
-    version: '1.0'
+    drawingPaths: diagramStore.drawingPaths,
+    version: '1.1'
   }
   
   const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -162,16 +163,20 @@ const loadFromFile = (event: Event) => {
         throw new Error('Invalid data structure')
       }
       
-      // Ensure shapes and arrows arrays exist
+      // Ensure shapes, arrows, and drawingPaths arrays exist
       if (!Array.isArray(data.shapes)) {
         data.shapes = []
       }
       if (!Array.isArray(data.arrows)) {
         data.arrows = []
       }
+      if (!Array.isArray(data.drawingPaths)) {
+        data.drawingPaths = []
+      }
       
       diagramStore.loadDiagram(data)
-      alert(`Successfully loaded ${data.shapes.length} shapes and ${data.arrows.length} arrows`)
+      const drawingCount = data.drawingPaths?.length || 0
+      alert(`Successfully loaded ${data.shapes.length} shapes, ${data.arrows.length} arrows, and ${drawingCount} drawings`)
       
     } catch (error) {
       console.error('Error loading file:', error)

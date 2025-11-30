@@ -445,16 +445,20 @@ export const useDiagramStore = defineStore('diagram', () => {
   const clearCanvas = () => {
     shapes.value = []
     arrows.value = []
+    drawingPaths.value = []
+    selectedDrawingPath.value = null
     selectedShape.value = null
     selectedArrow.value = null
     saveToLocalStorage()
   }
   
-  const loadDiagram = (data: { shapes: Shape[], arrows: Arrow[] }) => {
+  const loadDiagram = (data: { shapes: Shape[], arrows: Arrow[], drawingPaths?: DrawingPath[] }) => {
     shapes.value = data.shapes || []
     arrows.value = data.arrows || []
+    drawingPaths.value = data.drawingPaths || []
     selectedShape.value = null
     selectedArrow.value = null
+    selectedDrawingPath.value = null
     saveToLocalStorage()
   }
   
