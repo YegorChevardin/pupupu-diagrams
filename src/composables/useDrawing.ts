@@ -30,12 +30,40 @@ export function useDrawing() {
       )
       
       if (distance > 20 / zoom) {
-        diagramStore.addArrow({
+        // Check for nearby shapes at start and end points
+        const startShape = diagramStore.shapes.find(shape => {
+          const margin = 30
+          return startPoint.value.x >= shape.x - margin && 
+                 startPoint.value.x <= shape.x + shape.width + margin &&
+                 startPoint.value.y >= shape.y - margin && 
+                 startPoint.value.y <= shape.y + shape.height + margin
+        })
+        
+        const endShape = diagramStore.shapes.find(shape => {
+          const margin = 30
+          return worldPos.x >= shape.x - margin && 
+                 worldPos.x <= shape.x + shape.width + margin &&
+                 worldPos.y >= shape.y - margin && 
+                 worldPos.y <= shape.y + shape.height + margin
+        })
+        
+        const arrowData: any = {
           startX: startPoint.value.x,
           startY: startPoint.value.y,
           endX: worldPos.x,
           endY: worldPos.y
-        })
+        }
+        
+        // Add shape connections if found
+        if (startShape) {
+          arrowData.startShapeId = startShape.id
+        }
+        if (endShape) {
+          arrowData.endShapeId = endShape.id
+        }
+        
+        console.log('Creating arrow with auto-connection:', arrowData)
+        diagramStore.addArrow(arrowData)
       }
     } else {
       const width = Math.abs(worldPos.x - startPoint.value.x)

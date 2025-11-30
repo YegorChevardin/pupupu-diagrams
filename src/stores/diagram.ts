@@ -154,22 +154,24 @@ export const useDiagramStore = defineStore('diagram', () => {
   const addArrow = (arrowData: Omit<Arrow, 'id' | 'selected' | 'createdAt'>) => {
     let finalArrowData = { ...arrowData }
     
-    // Check if start point is near a shape
-    const startShape = findShapeAt(arrowData.startX, arrowData.startY)
-    if (startShape) {
-      const connectionPoint = getClosestConnectionPoint(startShape, arrowData.startX, arrowData.startY)
-      finalArrowData.startX = connectionPoint.x
-      finalArrowData.startY = connectionPoint.y
-      finalArrowData.startShapeId = startShape.id
+    // Only auto-connect if the arrow data already has shape IDs (from dot-to-dot connections)
+    // Don't auto-connect arrows created with the arrow tool
+    if (arrowData.startShapeId) {
+      const startShape = shapes.value.find(s => s.id === arrowData.startShapeId)
+      if (startShape) {
+        const connectionPoint = getClosestConnectionPoint(startShape, arrowData.startX, arrowData.startY)
+        finalArrowData.startX = connectionPoint.x
+        finalArrowData.startY = connectionPoint.y
+      }
     }
     
-    // Check if end point is near a shape
-    const endShape = findShapeAt(arrowData.endX, arrowData.endY)
-    if (endShape) {
-      const connectionPoint = getClosestConnectionPoint(endShape, arrowData.endX, arrowData.endY)
-      finalArrowData.endX = connectionPoint.x
-      finalArrowData.endY = connectionPoint.y
-      finalArrowData.endShapeId = endShape.id
+    if (arrowData.endShapeId) {
+      const endShape = shapes.value.find(s => s.id === arrowData.endShapeId)
+      if (endShape) {
+        const connectionPoint = getClosestConnectionPoint(endShape, arrowData.endX, arrowData.endY)
+        finalArrowData.endX = connectionPoint.x
+        finalArrowData.endY = connectionPoint.y
+      }
     }
 
     const arrow: Arrow = {
@@ -328,17 +330,23 @@ export const useDiagramStore = defineStore('diagram', () => {
   }
   
   const startConnection = (point: { x: number, y: number }, shapeId: string, dotId: string) => {
+    console.log('Starting connection from shape:', shapeId, 'dot:', dotId, 'point:', point)
     connectionState.value.isConnecting = true
     connectionState.value.startPoint = { x: point.x, y: point.y, shapeId, dotId }
   }
 
   const completeConnection = (endPoint: { x: number, y: number }, endShapeId: string, endDotId: string) => {
-    if (!connectionState.value.startPoint) return
+    console.log('Completing connection to shape:', endShapeId, 'dot:', endDotId, 'point:', endPoint)
+    if (!connectionState.value.startPoint) {
+      console.log('No start point found, cannot complete connection')
+      return
+    }
 
     const startPoint = connectionState.value.startPoint
     
     // Don't create arrow if connecting to the same shape
     if (startPoint.shapeId === endShapeId) {
+      console.log('Cannot connect shape to itself')
       cancelConnection()
       return
     }
@@ -353,6 +361,7 @@ export const useDiagramStore = defineStore('diagram', () => {
       endShapeId: endShapeId
     }
 
+    console.log('Creating arrow with data:', arrowData)
     addArrow(arrowData)
     cancelConnection()
   }

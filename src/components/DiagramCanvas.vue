@@ -73,7 +73,6 @@
       </g>
     </svg>
       
-      <!-- Inline Text Editor -->
       <InlineTextEditor
         :visible="isEditingText"
         :position="textInputPosition"
@@ -85,7 +84,6 @@
         @cancel="cancelTextEdit"
       />
       
-      <!-- Properties Panel -->
       <PropertiesPanel
         :visible="showPropertiesPanel"
         :position="propertiesPanelPosition"
@@ -187,6 +185,11 @@ const handleArrowStartMove = (arrow: Arrow, event: MouseEvent) => {
   if (!selection.selectedArrowIds.value.includes(arrow.id)) {
     handleArrowSelect(arrow)
   }
+  
+  if (arrow.startShapeId || arrow.endShapeId) {
+    return
+  }
+  
   isMovingArrow.value = true
   const rect = svgCanvas.value!.getBoundingClientRect()
   const worldPos = canvasInteraction.screenToWorld(event.clientX - rect.left, event.clientY - rect.top)
@@ -197,9 +200,27 @@ const handleArrowStartMove = (arrow: Arrow, event: MouseEvent) => {
 }
 
 const handleArrowStartDrag = (arrow: Arrow, endpoint: 'start' | 'end', event: MouseEvent) => {
+  console.log('🔵 Canvas received startDrag:', arrow.id, 'endpoint:', endpoint)
   event.stopPropagation()
+  event.preventDefault()
+  
   isDraggingArrow.value = true
   draggingArrow.value = { arrow, endpoint }
+  console.log('🔵 Set isDraggingArrow to true, draggingArrow:', draggingArrow.value)
+  
+  // If endpoint is linked, unlink it when dragging starts
+  if (endpoint === 'start' && arrow.startShapeId) {
+    console.log('🔵 Unlinking start endpoint from shape:', arrow.startShapeId)
+    arrow.startShapeId = undefined
+  } else if (endpoint === 'end' && arrow.endShapeId) {
+    console.log('🔵 Unlinking end endpoint from shape:', arrow.endShapeId)
+    arrow.endShapeId = undefined
+  }
+  
+  // Make sure the arrow is selected
+  if (!selection.selectedArrowIds.value.includes(arrow.id)) {
+    selection.selectArrow(arrow)
+  }
 }
 
 const handleMouseDown = (event: MouseEvent) => {
@@ -287,12 +308,46 @@ const handleMouseMove = (event: MouseEvent) => {
     selection.updateSelectionBox(worldPos)
   } else if (isDraggingArrow.value && draggingArrow.value) {
     const { arrow, endpoint } = draggingArrow.value
+    console.log('Dragging arrow endpoint:', endpoint, 'to position:', worldPos)
+    
     if (endpoint === 'start') {
       arrow.startX = worldPos.x
       arrow.startY = worldPos.y
     } else {
       arrow.endX = worldPos.x
       arrow.endY = worldPos.y
+    }
+    
+    // Check if the new position is near a shape for auto-connection
+    const nearbyShape = diagramStore.shapes.find(shape => {
+      // Check if point is within shape bounds plus margin
+      const margin = 30
+      return worldPos.x >= shape.x - margin && 
+             worldPos.x <= shape.x + shape.width + margin &&
+             worldPos.y >= shape.y - margin && 
+             worldPos.y <= shape.y + shape.height + margin
+    })
+    
+    if (nearbyShape) {
+      const connectionPoint = diagramStore.getClosestConnectionPoint(nearbyShape, worldPos.x, worldPos.y)
+      if (endpoint === 'start') {
+        arrow.startX = connectionPoint.x
+        arrow.startY = connectionPoint.y
+        arrow.startShapeId = nearbyShape.id
+        console.log('Auto-connected start to shape:', nearbyShape.id)
+      } else {
+        arrow.endX = connectionPoint.x
+        arrow.endY = connectionPoint.y
+        arrow.endShapeId = nearbyShape.id
+        console.log('Auto-connected end to shape:', nearbyShape.id)
+      }
+    } else {
+      // Clear connection if not near any shape
+      if (endpoint === 'start') {
+        arrow.startShapeId = undefined
+      } else {
+        arrow.endShapeId = undefined
+      }
     }
   } else if (isMovingArrow.value && selection.selectedArrowIds.value.length > 0) {
     const newStartX = worldPos.x - movingArrowOffset.value.x

@@ -14,7 +14,7 @@
       @mousedown.stop="$emit('startMove', arrow, $event)"
       @dblclick.stop="convertToCurved"
       @contextmenu.prevent.stop="convertToCurved"
-      style="cursor: pointer;"
+      :style="{ cursor: arrowCursor }"
     />
     
     <!-- Curved Arrow -->
@@ -28,7 +28,7 @@
       :marker-end="isSelected ? 'url(#arrowhead-selected)' : getArrowMarker(arrow.stroke)"
       @click.stop="$emit('select', arrow, $event)"
       @mousedown.stop="$emit('startMove', arrow, $event)"
-      style="cursor: pointer;"
+      :style="{ cursor: arrowCursor }"
     />
     
     <!-- Arrow Control Points for Curved Arrows -->
@@ -41,31 +41,58 @@
     
     <!-- Start/End Handles -->
     <g v-if="isSelected">
+      <!-- Invisible larger interaction area for start handle -->
       <circle
         :cx="arrow.startX"
         :cy="arrow.startY"
-        :r="Math.max(2, 4 / props.zoom)"
-        fill="#0078d4"
-        stroke="white"
-        :stroke-width="Math.max(0.5, 1 / props.zoom)"
-        class="arrow-handle"
-        @mousedown="$emit('startDrag', arrow, 'start', $event)"
+        :r="Math.max(12, 16 / props.zoom)"
+        fill="transparent"
+        style="cursor: move; pointer-events: all;"
+        @mousedown.stop.prevent="handleDragStart('start', $event)"
+        @click.stop.prevent
+        @mouseenter.stop="isHoveringHandle = true"
+        @mouseleave.stop="isHoveringHandle = false"
       />
+      <!-- Visible start handle -->
+      <circle
+        :cx="arrow.startX"
+        :cy="arrow.startY"
+        :r="Math.max(8, 12 / props.zoom)"
+        :fill="arrow.startShapeId ? '#ef4444' : '#10b981'"
+        stroke="white"
+        :stroke-width="Math.max(2, 4 / props.zoom)"
+        :class="['arrow-handle', { 'linked': arrow.startShapeId, 'draggable': !arrow.startShapeId }]"
+        style="pointer-events: none;"
+      />
+      <!-- Invisible larger interaction area for end handle -->
       <circle
         :cx="arrow.endX"
         :cy="arrow.endY"
-        :r="Math.max(2, 4 / props.zoom)"
-        fill="#0078d4"
+        :r="Math.max(12, 16 / props.zoom)"
+        fill="transparent"
+        style="cursor: move; pointer-events: all;"
+        @mousedown.stop.prevent="handleDragStart('end', $event)"
+        @click.stop.prevent
+        @mouseenter.stop="isHoveringHandle = true"
+        @mouseleave.stop="isHoveringHandle = false"
+      />
+      <!-- Visible end handle -->
+      <circle
+        :cx="arrow.endX"
+        :cy="arrow.endY"
+        :r="Math.max(8, 12 / props.zoom)"
+        :fill="arrow.endShapeId ? '#ef4444' : '#10b981'"
         stroke="white"
-        :stroke-width="Math.max(0.5, 1 / props.zoom)"
-        class="arrow-handle"
-        @mousedown="$emit('startDrag', arrow, 'end', $event)"
+        :stroke-width="Math.max(2, 4 / props.zoom)"
+        :class="['arrow-handle', { 'linked': arrow.endShapeId, 'draggable': !arrow.endShapeId }]"
+        style="pointer-events: none;"
       />
     </g>
   </g>
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { useDiagramStore, type Arrow } from '../../stores/diagram'
 import ArrowControlPoints from '../ArrowControlPoints.vue'
 
@@ -80,11 +107,30 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   zoom: 1
 })
-defineEmits<{
+
+const emit = defineEmits<{
   select: [arrow: Arrow, event: MouseEvent]
   startMove: [arrow: Arrow, event: MouseEvent]
   startDrag: [arrow: Arrow, endpoint: 'start' | 'end', event: MouseEvent]
 }>()
+
+const isHoveringHandle = ref(false)
+
+const handleDragStart = (endpoint: 'start' | 'end', event: MouseEvent) => {
+  console.log('🟢 Handle drag started:', endpoint, 'for arrow:', props.arrow.id, 'event:', event.type)
+  event.preventDefault()
+  event.stopPropagation()
+  
+  isHoveringHandle.value = false // Clear hover state when dragging starts
+  emit('startDrag', props.arrow, endpoint, event)
+  console.log('🟢 Emitted startDrag event')
+  return true
+}
+
+const arrowCursor = computed(() => {
+  // Always use pointer for arrow body to avoid conflicts
+  return 'pointer'
+})
 
 const convertToCurved = () => {
   diagramStore.convertArrowToCurved(props.arrow.id)
@@ -140,9 +186,22 @@ const getArrowMarker = (color?: string) => {
 <style scoped>
 .arrow-handle {
   cursor: move;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
+.arrow-handle.linked {
+  cursor: not-allowed !important;
+  opacity: 0.7;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.arrow-handle.draggable {
+  cursor: move !important;
+  filter: drop-shadow(0 2px 6px rgba(16, 185, 129, 0.4));
+}
+
+/* Remove hover transforms to prevent bouncing */
 .arrow-handle:hover {
-  fill: #1976d2;
+  /* No transform to prevent instability */
 }
 </style>
