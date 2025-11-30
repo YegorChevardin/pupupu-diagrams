@@ -4,6 +4,7 @@
     class="properties-panel"
     :style="{ left: position.x + 'px', top: position.y + 'px' }"
   >
+    <div class="panel-pointer"></div>
     <div class="panel-header">
       <span class="panel-title">{{ title }}</span>
       <button @click="$emit('close')" class="close-btn">×</button>
@@ -163,6 +164,31 @@ const decreaseFontSize = () => {
   min-width: 200px;
   z-index: 1000;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.panel-pointer {
+  position: absolute;
+  bottom: -8px;
+  left: 20px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid white;
+  z-index: 1001;
+}
+
+.panel-pointer::before {
+  content: '';
+  position: absolute;
+  bottom: 1px;
+  left: -9px;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 9px solid #e0e0e0;
+  z-index: -1;
 }
 
 .panel-header {

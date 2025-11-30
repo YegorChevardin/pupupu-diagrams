@@ -171,15 +171,14 @@ watch(() => diagramStore.tool, () => {
 const handleArrowSelect = (arrow: Arrow, event?: MouseEvent) => {
   selection.selectArrow(arrow, event)
   if (event) {
-    showPropertiesPanelFor(arrow, event.clientX, event.clientY)
+    showPropertiesPanelFor(arrow)
   }
 }
 
 const handleShapeSelect = (shape: Shape, event?: MouseEvent) => {
   selection.selectShape(shape, event)
   if (event) {
-    const rect = svgCanvas.value!.getBoundingClientRect()
-    showPropertiesPanelFor(shape, event.clientX - rect.left, event.clientY - rect.top)
+    showPropertiesPanelFor(shape)
   }
 }
 
@@ -534,10 +533,32 @@ const updateCurrentFontSize = (newSize: number) => {
 
 
 
-const showPropertiesPanelFor = (element: Shape | Arrow, screenX: number, screenY: number) => {
+const showPropertiesPanelFor = (element: Shape | Arrow) => {
+  const canvasRect = svgCanvas.value?.getBoundingClientRect()
+  if (!canvasRect) return
+
+  // Calculate element position in screen coordinates
+  let elementX, elementY
+  
+  if ('type' in element) {
+    // Shape element
+    elementX = element.x * canvasInteraction.zoom.value + canvasInteraction.panX.value
+    elementY = element.y * canvasInteraction.zoom.value + canvasInteraction.panY.value
+  } else {
+    // Arrow element - use start position
+    elementX = element.startX * canvasInteraction.zoom.value + canvasInteraction.panX.value
+    elementY = element.startY * canvasInteraction.zoom.value + canvasInteraction.panY.value
+  }
+  
+  // Position panel above and to the left of the element
+  const panelWidth = 220 // Approximate panel width
+  const panelHeight = 120 // Approximate panel height
+  const screenX = canvasRect.left + elementX
+  const screenY = canvasRect.top + elementY
+  
   propertiesPanelPosition.value = {
-    x: Math.max(10, screenX - 100),
-    y: Math.max(10, screenY - 80)
+    x: Math.max(10, Math.min(window.innerWidth - panelWidth - 10, screenX - 10)),
+    y: Math.max(10, screenY - panelHeight - 20) // 20px above the element
   }
   showPropertiesPanel.value = true
 }
