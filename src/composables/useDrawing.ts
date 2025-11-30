@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { useDiagramStore, type Shape, type Arrow } from '../stores/diagram'
+import { useDiagramStore, type Shape, type Arrow, type DrawingPath } from '../stores/diagram'
 
 export function useDrawing() {
   const diagramStore = useDiagramStore()
@@ -7,24 +7,57 @@ export function useDrawing() {
   const isDrawing = ref(false)
   const startPoint = ref({ x: 0, y: 0 })
   const currentPoint = ref({ x: 0, y: 0 })
+  const pencilPoints = ref<Array<{ x: number, y: number }>>([])
 
   const startDrawing = (worldPos: { x: number; y: number }) => {
     isDrawing.value = true
     startPoint.value = worldPos
     currentPoint.value = worldPos
+    
+    if (diagramStore.tool === 'pencil') {
+      pencilPoints.value = [worldPos]
+    }
+    
     diagramStore.clearSelection()
   }
 
   const updateDrawing = (worldPos: { x: number; y: number }) => {
     if (isDrawing.value) {
       currentPoint.value = worldPos
+      
+      if (diagramStore.tool === 'pencil') {
+        // Add point to pencil path if it's far enough from the last point
+        const lastPoint = pencilPoints.value[pencilPoints.value.length - 1]
+        if (lastPoint) {
+          const distance = Math.sqrt(
+            Math.pow(worldPos.x - lastPoint.x, 2) + Math.pow(worldPos.y - lastPoint.y, 2)
+          )
+          if (distance > 2) { // Minimum distance between points
+            pencilPoints.value.push(worldPos)
+          }
+        }
+      }
     }
   }
 
   const completeDrawing = (worldPos: { x: number; y: number }, zoom: number) => {
     if (!isDrawing.value) return
 
-    if (diagramStore.tool === 'arrow') {
+    if (diagramStore.tool === 'pencil') {
+      // Add final point and create drawing path
+      if (pencilPoints.value.length > 1) {
+        pencilPoints.value.push(worldPos)
+        
+        diagramStore.addDrawingPath({
+          points: [...pencilPoints.value],
+          stroke: '#000000', // Default color, can be customized later
+          strokeWidth: 2 // Default width, can be customized later
+        })
+      }
+      
+      // Reset pencil state
+      pencilPoints.value = []
+    } else if (diagramStore.tool === 'arrow') {
       const distance = Math.sqrt(
         Math.pow(worldPos.x - startPoint.value.x, 2) + Math.pow(worldPos.y - startPoint.value.y, 2)
       )
@@ -113,6 +146,7 @@ export function useDrawing() {
     isDrawing,
     startPoint,
     currentPoint,
+    pencilPoints,
     startDrawing,
     updateDrawing,
     completeDrawing

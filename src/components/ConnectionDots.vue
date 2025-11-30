@@ -20,10 +20,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useDiagramStore, type Shape } from '../stores/diagram'
+import { useDiagramStore, type Shape, type DrawingPath } from '../stores/diagram'
 
 interface Props {
-  shape: Shape
+  shape?: Shape
+  drawingPath?: DrawingPath
   showDots: boolean
   dotSize?: number
   dotColor?: string
@@ -46,7 +47,12 @@ const emit = defineEmits<Emits>()
 const diagramStore = useDiagramStore()
 
 const connectionPoints = computed(() => {
-  return diagramStore.getShapeConnectionPoints(props.shape)
+  if (props.shape) {
+    return diagramStore.getShapeConnectionPoints(props.shape)
+  } else if (props.drawingPath) {
+    return props.drawingPath.connectionPoints || []
+  }
+  return []
 })
 
 const onDotHover = (point: { x: number, y: number, id: string }) => {
@@ -58,15 +64,16 @@ const onDotLeave = () => {
 }
 
 const onDotClick = (point: { x: number, y: number, id: string }) => {
-  console.log('Connection dot clicked:', point, 'Shape:', props.shape.id)
+  const elementId = props.shape?.id || props.drawingPath?.id
+  console.log('Connection dot clicked:', point, 'Element:', elementId)
   if (diagramStore.connectionState.isConnecting) {
-    console.log('Completing connection to:', props.shape.id)
+    console.log('Completing connection to:', elementId)
     // Complete the connection
-    diagramStore.completeConnection(point, props.shape.id, point.id)
+    diagramStore.completeConnection(point, elementId!, point.id)
   } else {
-    console.log('Starting connection from:', props.shape.id)
+    console.log('Starting connection from:', elementId)
     // Start a new connection
-    diagramStore.startConnection(point, props.shape.id, point.id)
+    diagramStore.startConnection(point, elementId!, point.id)
   }
 }
 
@@ -89,8 +96,9 @@ const getDotStrokeWidth = (point: { x: number, y: number, id: string }) => {
 
 const isStartPoint = (point: { x: number, y: number, id: string }) => {
   const startPoint = diagramStore.connectionState.startPoint
+  const elementId = props.shape?.id || props.drawingPath?.id
   return startPoint && 
-         startPoint.shapeId === props.shape.id && 
+         startPoint.shapeId === elementId && 
          startPoint.dotId === point.id
 }
 </script>

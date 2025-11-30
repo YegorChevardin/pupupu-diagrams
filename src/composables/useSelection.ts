@@ -1,11 +1,12 @@
 import { ref } from 'vue'
-import { useDiagramStore, type Shape, type Arrow } from '../stores/diagram'
+import { useDiagramStore, type Shape, type Arrow, type DrawingPath } from '../stores/diagram'
 
 export function useSelection() {
   const diagramStore = useDiagramStore()
   
   const selectedShapeIds = ref<string[]>([])
   const selectedArrowIds = ref<string[]>([])
+  const selectedDrawingPathIds = ref<string[]>([])
   
   const isSelecting = ref(false)
   const selectionStart = ref({ x: 0, y: 0 })
@@ -14,11 +15,15 @@ export function useSelection() {
   const clearAllSelections = () => {
     selectedShapeIds.value = []
     selectedArrowIds.value = []
+    selectedDrawingPathIds.value = []
     diagramStore.shapes.forEach(shape => {
       shape.selected = false
     })
     diagramStore.arrows.forEach(arrow => {
       arrow.selected = false
+    })
+    diagramStore.drawingPaths.forEach(drawingPath => {
+      drawingPath.selected = false
     })
     diagramStore.clearSelection()
   }
@@ -53,6 +58,23 @@ export function useSelection() {
       selectedArrowIds.value = [arrow.id]
       arrow.selected = true
       diagramStore.selectArrow(arrow)
+    }
+  }
+
+  const selectDrawingPath = (drawingPath: DrawingPath, event?: MouseEvent) => {
+    if (event && (event.ctrlKey || event.metaKey)) {
+      if (selectedDrawingPathIds.value.includes(drawingPath.id)) {
+        selectedDrawingPathIds.value = selectedDrawingPathIds.value.filter(id => id !== drawingPath.id)
+        drawingPath.selected = false
+      } else {
+        selectedDrawingPathIds.value.push(drawingPath.id)
+        drawingPath.selected = true
+      }
+    } else {
+      clearAllSelections()
+      selectedDrawingPathIds.value = [drawingPath.id]
+      drawingPath.selected = true
+      diagramStore.selectDrawingPath(drawingPath)
     }
   }
 
@@ -115,6 +137,25 @@ export function useSelection() {
         arrow.selected = true
       }
     })
+    
+    diagramStore.drawingPaths.forEach(drawingPath => {
+      if (!drawingPath || !drawingPath.points || drawingPath.points.length === 0) return
+      
+      const pathMinX = drawingPath.minX || 0
+      const pathMaxX = drawingPath.maxX || 0
+      const pathMinY = drawingPath.minY || 0
+      const pathMaxY = drawingPath.maxY || 0
+      
+      const intersects = !(pathMinX > maxX || 
+                          pathMaxX < minX ||
+                          pathMinY > maxY ||
+                          pathMaxY < minY)
+      
+      if (intersects && !selectedDrawingPathIds.value.includes(drawingPath.id)) {
+        selectedDrawingPathIds.value.push(drawingPath.id)
+        drawingPath.selected = true
+      }
+    })
 
     isSelecting.value = false
   }
@@ -122,12 +163,14 @@ export function useSelection() {
   return {
     selectedShapeIds,
     selectedArrowIds,
+    selectedDrawingPathIds,
     isSelecting,
     selectionStart,
     selectionEnd,
     clearAllSelections,
     selectShape,
     selectArrow,
+    selectDrawingPath,
     startSelectionBox,
     updateSelectionBox,
     completeSelectionBox

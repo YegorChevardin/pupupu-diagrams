@@ -32,6 +32,17 @@
       :stroke-dasharray="`${Math.max(3, 5 / zoom)},${Math.max(3, 5 / zoom)}`"
       marker-end="url(#arrowhead-preview)"
     />
+    
+    <path
+      v-if="tool === 'pencil' && pencilPoints && pencilPoints.length > 0"
+      :d="getPencilPreviewPath()"
+      fill="none"
+      stroke="#2196f3"
+      :stroke-width="Math.max(1, 2 / zoom)"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.7"
+    />
   </g>
 </template>
 
@@ -41,6 +52,7 @@ interface Props {
   tool: string
   startPoint: { x: number; y: number }
   currentPoint: { x: number; y: number }
+  pencilPoints?: Array<{ x: number, y: number }>
   zoom?: number
 }
 
@@ -60,5 +72,23 @@ const getPreviewDiamondPath = () => {
   const hh = height / 2
   
   return `M ${cx} ${cy - hh} L ${cx + hw} ${cy} L ${cx} ${cy + hh} L ${cx - hw} ${cy} Z`
+}
+
+const getPencilPreviewPath = () => {
+  if (!props.pencilPoints || props.pencilPoints.length === 0) return ''
+  
+  const firstPoint = props.pencilPoints[0]
+  if (!firstPoint) return ''
+  
+  let path = `M ${firstPoint.x} ${firstPoint.y}`
+  
+  for (let i = 1; i < props.pencilPoints.length; i++) {
+    const point = props.pencilPoints[i]
+    if (point) {
+      path += ` L ${point.x} ${point.y}`
+    }
+  }
+  
+  return path
 }
 </script>

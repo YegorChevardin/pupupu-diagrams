@@ -21,6 +21,8 @@
       <CanvasBackground />
       <ArrowMarkers :zoom="canvasInteraction.zoom.value" />
       
+
+      
       <g :transform="`translate(${canvasInteraction.panX.value}, ${canvasInteraction.panY.value}) scale(${canvasInteraction.zoom.value})`">
         <template v-for="element in allElementsSorted" :key="element.id">
           <ArrowRenderer
@@ -32,6 +34,18 @@
             @start-move="handleArrowStartMove"
             @start-drag="handleArrowStartDrag"
           />
+          
+          <DrawingPathRenderer
+            v-else-if="element.elementType === 'drawingPath'"
+            :drawing-path="element as any"
+            :is-selected="(element as any).selected || selection.selectedDrawingPathIds.value.includes(element.id)"
+            :zoom="canvasInteraction.zoom.value"
+            @select="handleDrawingPathSelect"
+            @start-move="handleDrawingPathStartMove"
+            @start-resize="handleDrawingPathStartResize"
+          />
+          
+
           
           <ShapeRenderer
             v-else
@@ -48,6 +62,13 @@
             :show-dots="true"
             :dot-size="4 / canvasInteraction.zoom.value"
           />
+          
+          <ConnectionDots
+            v-if="element.elementType === 'drawingPath' && ((element as any).selected || selection.selectedDrawingPathIds.value.includes(element.id) || diagramStore.tool === 'arrow' || diagramStore.connectionState.isConnecting)"
+            :drawing-path="element as any"
+            :show-dots="true"
+            :dot-size="4 / canvasInteraction.zoom.value"
+          />
         </template>
         
         <DrawingPreview
@@ -55,6 +76,7 @@
           :tool="diagramStore.tool"
           :start-point="drawing.startPoint.value"
           :current-point="drawing.currentPoint.value"
+          :pencil-points="drawing.pencilPoints.value"
           :zoom="canvasInteraction.zoom.value"
         />
         
@@ -105,7 +127,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { useDiagramStore, type Shape, type Arrow } from '../stores/diagram.js'
+import { useDiagramStore, type Shape, type Arrow, type DrawingPath } from '../stores/diagram.js'
 import { useCanvasInteraction } from '../composables/useCanvasInteraction'
 import { useSelection } from '../composables/useSelection'
 import { useDrawing } from '../composables/useDrawing'
@@ -118,6 +140,7 @@ import CanvasBackground from './canvas/CanvasBackground.vue'
 import ArrowMarkers from './canvas/ArrowMarkers.vue'
 import ArrowRenderer from './canvas/ArrowRenderer.vue'
 import ShapeRenderer from './canvas/ShapeRenderer.vue'
+import DrawingPathRenderer from './canvas/DrawingPathRenderer.vue'
 import DrawingPreview from './canvas/DrawingPreview.vue'
 import SelectionBox from './canvas/SelectionBox.vue'
 import SelectionHandles from './canvas/SelectionHandles.vue'
@@ -180,6 +203,48 @@ const handleShapeSelect = (shape: Shape, event?: MouseEvent) => {
   }
 }
 
+const handleDrawingPathSelect = (drawingPath: DrawingPath, event?: MouseEvent) => {
+  selection.selectDrawingPath(drawingPath, event)
+  if (event) {
+    showPropertiesPanelFor(drawingPath)
+  }
+}
+
+const isDrawingPathDragging = ref(false)
+const draggingDrawingPath = ref<DrawingPath | null>(null)
+const drawingPathDragStart = ref({ x: 0, y: 0 })
+
+const handleDrawingPathStartMove = (drawingPath: DrawingPath, event: MouseEvent) => {
+  event.stopPropagation()
+  if (!selection.selectedDrawingPathIds.value.includes(drawingPath.id)) {
+    handleDrawingPathSelect(drawingPath)
+  }
+  
+  isDrawingPathDragging.value = true
+  draggingDrawingPath.value = drawingPath
+  
+  const rect = svgCanvas.value!.getBoundingClientRect()
+  const worldPos = canvasInteraction.screenToWorld(event.clientX - rect.left, event.clientY - rect.top)
+  drawingPathDragStart.value = { x: worldPos.x, y: worldPos.y }
+}
+
+const isResizingDrawingPath = ref(false)
+const resizingDrawingPath = ref<DrawingPath | null>(null)
+const resizeDrawingPathHandle = ref('')
+
+const handleDrawingPathStartResize = (drawingPath: DrawingPath, handle: string, event: MouseEvent) => {
+  event.stopPropagation()
+  event.preventDefault()
+  
+  isResizingDrawingPath.value = true
+  resizingDrawingPath.value = drawingPath
+  resizeDrawingPathHandle.value = handle
+  
+  const rect = svgCanvas.value!.getBoundingClientRect()
+  const worldPos = canvasInteraction.screenToWorld(event.clientX - rect.left, event.clientY - rect.top)
+  drawingPathDragStart.value = { x: worldPos.x, y: worldPos.y }
+}
+
 const handleArrowStartMove = (arrow: Arrow, event: MouseEvent) => {
   event.stopPropagation()
   if (!selection.selectedArrowIds.value.includes(arrow.id)) {
@@ -204,7 +269,6 @@ const handleArrowStartDrag = (arrow: Arrow, endpoint: 'start' | 'end', event: Mo
   event.stopPropagation()
   event.preventDefault()
   
-  // Find the current store reference to ensure we're working with the latest data
   const storeArrow = diagramStore.arrows.find(a => a.id === arrow.id)
   if (!storeArrow) {
     console.error('🔵 Arrow not found in store:', arrow.id)
@@ -215,7 +279,6 @@ const handleArrowStartDrag = (arrow: Arrow, endpoint: 'start' | 'end', event: Mo
   draggingArrow.value = { arrow: storeArrow, endpoint }
   console.log('🔵 Set isDraggingArrow to true, using store arrow')
   
-  // If endpoint is linked, unlink it when dragging starts
   if (endpoint === 'start' && storeArrow.startShapeId) {
     console.log('🔵 Unlinking start endpoint from shape:', storeArrow.startShapeId)
     storeArrow.startShapeId = undefined
@@ -224,7 +287,6 @@ const handleArrowStartDrag = (arrow: Arrow, endpoint: 'start' | 'end', event: Mo
     storeArrow.endShapeId = undefined
   }
   
-  // Make sure the arrow is selected
   if (!selection.selectedArrowIds.value.includes(arrow.id)) {
     selection.selectArrow(storeArrow)
   }
@@ -250,8 +312,31 @@ const handleMouseDown = (event: MouseEvent) => {
   if (diagramStore.tool === 'select') {
     const clickedShape = geometry.getShapeAtPoint(worldPos.x, worldPos.y)
     const clickedArrow = geometry.getArrowAtPoint(worldPos.x, worldPos.y)
+    const clickedDrawingPath = geometry.getDrawingPathAtPoint(worldPos.x, worldPos.y)
     
-    if (clickedShape) {
+
+    
+    if (clickedDrawingPath) {
+      if (event.ctrlKey || event.metaKey) {
+        if (selection.selectedDrawingPathIds.value.includes(clickedDrawingPath.id)) {
+          selection.selectedDrawingPathIds.value = selection.selectedDrawingPathIds.value.filter(id => id !== clickedDrawingPath.id)
+          clickedDrawingPath.selected = false
+        } else {
+          selection.selectedDrawingPathIds.value.push(clickedDrawingPath.id)
+          clickedDrawingPath.selected = true
+        }
+      } else if (selection.selectedDrawingPathIds.value.includes(clickedDrawingPath.id)) {
+        isDrawingPathDragging.value = true
+        draggingDrawingPath.value = clickedDrawingPath
+        drawingPathDragStart.value = worldPos
+      } else {
+        selection.clearAllSelections()
+        handleDrawingPathSelect(clickedDrawingPath, event)
+        isDrawingPathDragging.value = true
+        draggingDrawingPath.value = clickedDrawingPath
+        drawingPathDragStart.value = worldPos
+      }
+    } else if (clickedShape) {
       if (event.ctrlKey || event.metaKey) {
         if (selection.selectedShapeIds.value.includes(clickedShape.id)) {
           selection.selectedShapeIds.value = selection.selectedShapeIds.value.filter(id => id !== clickedShape.id)
@@ -324,7 +409,6 @@ const handleMouseMove = (event: MouseEvent) => {
     const { arrow, endpoint } = draggingArrow.value
     console.log('🔵 Dragging arrow endpoint:', endpoint, 'to position:', worldPos, 'arrowId:', arrow.id)
     
-    // Update arrow through store to ensure reactivity
     const storeArrow = diagramStore.arrows.find(a => a.id === arrow.id)
     if (storeArrow) {
       if (endpoint === 'start') {
@@ -336,9 +420,7 @@ const handleMouseMove = (event: MouseEvent) => {
       }
     }
     
-    // Check if the new position is near a shape for auto-connection
     const nearbyShape = diagramStore.shapes.find(shape => {
-      // Check if point is within shape bounds plus margin
       const margin = 30
       return worldPos.x >= shape.x - margin && 
              worldPos.x <= shape.x + shape.width + margin &&
@@ -360,7 +442,6 @@ const handleMouseMove = (event: MouseEvent) => {
         console.log('🔵 Auto-connected end to shape:', nearbyShape.id)
       }
     } else if (storeArrow) {
-      // Clear connection if not near any shape
       if (endpoint === 'start') {
         storeArrow.startShapeId = undefined
       } else {
@@ -392,10 +473,85 @@ const handleMouseMove = (event: MouseEvent) => {
         if (shape && originalPos) {
           shape.x = originalPos.x + dx
           shape.y = originalPos.y + dy
-          // Update connected arrows for this shape
           diagramStore.updateConnectedArrows(shapeId)
         }
       })
+    }
+  } else if (isDrawingPathDragging.value && draggingDrawingPath.value) {
+    const deltaX = worldPos.x - drawingPathDragStart.value.x
+    const deltaY = worldPos.y - drawingPathDragStart.value.y
+    
+    diagramStore.moveDrawingPath(draggingDrawingPath.value.id, deltaX, deltaY)
+    
+    drawingPathDragStart.value = worldPos
+  } else if (isResizingDrawingPath.value && resizingDrawingPath.value) {
+    const handle = resizeDrawingPathHandle.value
+    const path = resizingDrawingPath.value
+    
+    if (path.points.length > 0) {
+      const originalMinX = path.minX || 0
+      const originalMinY = path.minY || 0
+      const originalMaxX = path.maxX || 0
+      const originalMaxY = path.maxY || 0
+      const originalWidth = originalMaxX - originalMinX
+      const originalHeight = originalMaxY - originalMinY
+      
+      let newWidth = originalWidth
+      let newHeight = originalHeight
+      
+      switch (handle) {
+        case 'bottom-right':
+          newWidth = Math.max(10, worldPos.x - originalMinX)
+          newHeight = Math.max(10, worldPos.y - originalMinY)
+          break
+        case 'top-left':
+          newWidth = Math.max(10, originalMaxX - worldPos.x)
+          newHeight = Math.max(10, originalMaxY - worldPos.y)
+          break
+        case 'top-right':
+          newWidth = Math.max(10, worldPos.x - originalMinX)
+          newHeight = Math.max(10, originalMaxY - worldPos.y)
+          break
+        case 'bottom-left':
+          newWidth = Math.max(10, originalMaxX - worldPos.x)
+          newHeight = Math.max(10, worldPos.y - originalMinY)
+          break
+      }
+      
+      const scaleX = originalWidth > 0 ? newWidth / originalWidth : 1
+      const scaleY = originalHeight > 0 ? newHeight / originalHeight : 1
+      
+      if (scaleX > 0.1 && scaleY > 0.1 && scaleX < 10 && scaleY < 10) {
+        let anchorX = originalMinX
+        let anchorY = originalMinY
+        
+        switch (handle) {
+          case 'top-left':
+            anchorX = originalMaxX
+            anchorY = originalMaxY
+            break
+          case 'top-right':
+            anchorX = originalMinX
+            anchorY = originalMaxY
+            break
+          case 'bottom-left':
+            anchorX = originalMaxX
+            anchorY = originalMinY
+            break
+        }
+        
+        path.points.forEach(point => {
+          point.x = anchorX + (point.x - anchorX) * scaleX
+          point.y = anchorY + (point.y - anchorY) * scaleY
+        })
+        
+        const xs = path.points.map(p => p.x)
+        const ys = path.points.map(p => p.y)
+        path.minX = Math.min(...xs)
+        path.minY = Math.min(...ys)
+        path.maxX = Math.max(...xs)
+        path.maxY = Math.max(...ys)
+      }
     }
   } else if (isResizing.value && diagramStore.selectedShape) {
     const dx = worldPos.x - resizeStartPoint.value.x
@@ -469,9 +625,16 @@ const handleMouseUp = (event: MouseEvent) => {
   if (isDraggingArrow.value || isMovingArrow.value) {
     diagramStore.saveToLocalStorage()
   }
+  if (isDrawingPathDragging.value || isResizingDrawingPath.value) {
+    diagramStore.saveToLocalStorage()
+  }
   isDraggingArrow.value = false
   draggingArrow.value = null
   isMovingArrow.value = false
+  isDrawingPathDragging.value = false
+  draggingDrawingPath.value = null
+  isResizingDrawingPath.value = false
+  resizingDrawingPath.value = null
   isResizing.value = false
   canvasInteraction.isPanning.value = false
   canvasInteraction.isWheelPressed.value = false
@@ -580,7 +743,7 @@ const currentFontSizeForPanel = computed(() => {
 })
 
 const allElementsSorted = computed(() => {
-  const elements: Array<(Shape & { elementType: 'shape' }) | (Arrow & { elementType: 'arrow' })> = []
+  const elements: Array<(Shape & { elementType: 'shape' }) | (Arrow & { elementType: 'arrow' }) | (DrawingPath & { elementType: 'drawingPath' })> = []
   
   diagramStore.shapes.forEach(shape => {
     elements.push({ ...shape, elementType: 'shape' as const })
@@ -588,6 +751,10 @@ const allElementsSorted = computed(() => {
   
   diagramStore.arrows.forEach(arrow => {
     elements.push({ ...arrow, elementType: 'arrow' as const })
+  })
+  
+  diagramStore.drawingPaths.forEach(drawingPath => {
+    elements.push({ ...drawingPath, elementType: 'drawingPath' as const })
   })
   
   return elements.sort((a, b) => {
@@ -606,32 +773,31 @@ const updateCurrentFontSize = (newSize: number) => {
 
 
 
-const showPropertiesPanelFor = (element: Shape | Arrow) => {
+const showPropertiesPanelFor = (element: Shape | Arrow | DrawingPath) => {
   const canvasRect = svgCanvas.value?.getBoundingClientRect()
   if (!canvasRect) return
 
-  // Calculate element position in screen coordinates
   let elementX, elementY
   
   if ('type' in element) {
-    // Shape element
     elementX = element.x * canvasInteraction.zoom.value + canvasInteraction.panX.value
     elementY = element.y * canvasInteraction.zoom.value + canvasInteraction.panY.value
-  } else {
-    // Arrow element - use start position
+  } else if ('startX' in element) {
     elementX = element.startX * canvasInteraction.zoom.value + canvasInteraction.panX.value
     elementY = element.startY * canvasInteraction.zoom.value + canvasInteraction.panY.value
+  } else {
+    elementX = (element.minX || 0) * canvasInteraction.zoom.value + canvasInteraction.panX.value
+    elementY = (element.minY || 0) * canvasInteraction.zoom.value + canvasInteraction.panY.value
   }
   
-  // Position panel above and to the left of the element
-  const panelWidth = 220 // Approximate panel width
-  const panelHeight = 120 // Approximate panel height
-  const screenX = canvasRect.left + elementX
-  const screenY = canvasRect.top + elementY
+  const panelWidth = 220;
+  const panelHeight = 120;
+  const screenX = canvasRect.left + elementX;
+  const screenY = canvasRect.top + elementY;
   
   propertiesPanelPosition.value = {
     x: Math.max(10, Math.min(window.innerWidth - panelWidth - 10, screenX - 10)),
-    y: Math.max(10, screenY - panelHeight - 20) // 20px above the element
+    y: Math.max(10, screenY - panelHeight - 20)
   }
   showPropertiesPanel.value = true
 }
@@ -722,7 +888,7 @@ onMounted(() => {
     if (isEditingText.value) return
     
     if (event.key === 'Delete' || event.key === 'Backspace') {
-      if (selection.selectedShapeIds.value.length > 0 || selection.selectedArrowIds.value.length > 0) {
+      if (selection.selectedShapeIds.value.length > 0 || selection.selectedArrowIds.value.length > 0 || selection.selectedDrawingPathIds.value.length > 0) {
         selection.selectedShapeIds.value.forEach(shapeId => {
           const shapeIndex = diagramStore.shapes.findIndex(s => s.id === shapeId)
           if (shapeIndex > -1) {
@@ -735,8 +901,15 @@ onMounted(() => {
             diagramStore.arrows.splice(arrowIndex, 1)
           }
         })
+        selection.selectedDrawingPathIds.value.forEach(drawingPathId => {
+          const drawingPathIndex = diagramStore.drawingPaths.findIndex(d => d.id === drawingPathId)
+          if (drawingPathIndex > -1) {
+            diagramStore.drawingPaths.splice(drawingPathIndex, 1)
+          }
+        })
         selection.selectedShapeIds.value = []
         selection.selectedArrowIds.value = []
+        selection.selectedDrawingPathIds.value = []
         hidePropertiesPanel()
         diagramStore.saveToLocalStorage()
       } else {
@@ -754,6 +927,10 @@ onMounted(() => {
       event.preventDefault()
       selection.selectedShapeIds.value = diagramStore.shapes.map(s => s.id)
       selection.selectedArrowIds.value = diagramStore.arrows.map(a => a.id)
+      selection.selectedDrawingPathIds.value = diagramStore.drawingPaths.map(d => d.id)
+      diagramStore.shapes.forEach(s => s.selected = true)
+      diagramStore.arrows.forEach(a => a.selected = true)
+      diagramStore.drawingPaths.forEach(d => d.selected = true)
       diagramStore.shapes.forEach(s => s.selected = true)
       diagramStore.arrows.forEach(a => a.selected = true)
     }

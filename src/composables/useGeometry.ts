@@ -1,4 +1,4 @@
-import { useDiagramStore, type Shape, type Arrow } from '../stores/diagram'
+import { useDiagramStore, type Shape, type Arrow, type DrawingPath } from '../stores/diagram'
 
 export function useGeometry() {
   const diagramStore = useDiagramStore()
@@ -44,6 +44,39 @@ export function useGeometry() {
     })
   }
 
+  const getDrawingPathAtPoint = (x: number, y: number): DrawingPath | undefined => {
+    // Check drawing paths in reverse order (most recently created first)
+    for (let i = diagramStore.drawingPaths.length - 1; i >= 0; i--) {
+      const path = diagramStore.drawingPaths[i]
+      if (!path || !path.points || path.points.length === 0) continue
+      
+      // For selection purposes, use expanded bounding box with padding
+      const padding = 15 // More generous padding for easier selection
+      const minX = (path.minX || 0) - padding
+      const maxX = (path.maxX || 0) + padding
+      const minY = (path.minY || 0) - padding
+      const maxY = (path.maxY || 0) + padding
+      
+      // First check if point is within expanded bounding box
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+        // For paths within bounding box, do a line distance check with generous tolerance
+        const tolerance = 20 // Very generous tolerance for selection
+        
+        for (let j = 0; j < path.points.length - 1; j++) {
+          const point1 = path.points[j]
+          const point2 = path.points[j + 1]
+          if (point1 && point2) {
+            const distance = distanceToLine(x, y, point1.x, point1.y, point2.x, point2.y)
+            if (distance <= tolerance) {
+              return path
+            }
+          }
+        }
+      }
+    }
+    return undefined
+  }
+
   const distanceToLine = (px: number, py: number, x1: number, y1: number, x2: number, y2: number) => {
     const A = px - x1
     const B = py - y1
@@ -79,6 +112,7 @@ export function useGeometry() {
   return {
     getShapeAtPoint,
     getArrowAtPoint,
+    getDrawingPathAtPoint,
     distanceToLine
   }
 }
