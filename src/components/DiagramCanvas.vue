@@ -204,22 +204,29 @@ const handleArrowStartDrag = (arrow: Arrow, endpoint: 'start' | 'end', event: Mo
   event.stopPropagation()
   event.preventDefault()
   
+  // Find the current store reference to ensure we're working with the latest data
+  const storeArrow = diagramStore.arrows.find(a => a.id === arrow.id)
+  if (!storeArrow) {
+    console.error('🔵 Arrow not found in store:', arrow.id)
+    return
+  }
+  
   isDraggingArrow.value = true
-  draggingArrow.value = { arrow, endpoint }
-  console.log('🔵 Set isDraggingArrow to true, draggingArrow:', draggingArrow.value)
+  draggingArrow.value = { arrow: storeArrow, endpoint }
+  console.log('🔵 Set isDraggingArrow to true, using store arrow')
   
   // If endpoint is linked, unlink it when dragging starts
-  if (endpoint === 'start' && arrow.startShapeId) {
-    console.log('🔵 Unlinking start endpoint from shape:', arrow.startShapeId)
-    arrow.startShapeId = undefined
-  } else if (endpoint === 'end' && arrow.endShapeId) {
-    console.log('🔵 Unlinking end endpoint from shape:', arrow.endShapeId)
-    arrow.endShapeId = undefined
+  if (endpoint === 'start' && storeArrow.startShapeId) {
+    console.log('🔵 Unlinking start endpoint from shape:', storeArrow.startShapeId)
+    storeArrow.startShapeId = undefined
+  } else if (endpoint === 'end' && storeArrow.endShapeId) {
+    console.log('🔵 Unlinking end endpoint from shape:', storeArrow.endShapeId)
+    storeArrow.endShapeId = undefined
   }
   
   // Make sure the arrow is selected
   if (!selection.selectedArrowIds.value.includes(arrow.id)) {
-    selection.selectArrow(arrow)
+    selection.selectArrow(storeArrow)
   }
 }
 
@@ -296,7 +303,14 @@ const handleMouseMove = (event: MouseEvent) => {
   const screenY = event.clientY - rect.top
   const worldPos = canvasInteraction.screenToWorld(screenX, screenY)
   
-  drawing.updateDrawing(worldPos)
+  if (isDraggingArrow.value) {
+    console.log('🔵 Mouse move during arrow drag:', {
+      isDraggingArrow: isDraggingArrow.value,
+      draggingArrow: draggingArrow.value,
+      worldPos
+    })
+    diagramStore.saveToLocalStorage()
+  }  drawing.updateDrawing(worldPos)
   
   if (canvasInteraction.isPanning.value && canvasInteraction.isWheelPressed.value) {
     const dx = screenX - canvasInteraction.lastPanPoint.value.x
@@ -308,14 +322,18 @@ const handleMouseMove = (event: MouseEvent) => {
     selection.updateSelectionBox(worldPos)
   } else if (isDraggingArrow.value && draggingArrow.value) {
     const { arrow, endpoint } = draggingArrow.value
-    console.log('Dragging arrow endpoint:', endpoint, 'to position:', worldPos)
+    console.log('🔵 Dragging arrow endpoint:', endpoint, 'to position:', worldPos, 'arrowId:', arrow.id)
     
-    if (endpoint === 'start') {
-      arrow.startX = worldPos.x
-      arrow.startY = worldPos.y
-    } else {
-      arrow.endX = worldPos.x
-      arrow.endY = worldPos.y
+    // Update arrow through store to ensure reactivity
+    const storeArrow = diagramStore.arrows.find(a => a.id === arrow.id)
+    if (storeArrow) {
+      if (endpoint === 'start') {
+        storeArrow.startX = worldPos.x
+        storeArrow.startY = worldPos.y
+      } else {
+        storeArrow.endX = worldPos.x
+        storeArrow.endY = worldPos.y
+      }
     }
     
     // Check if the new position is near a shape for auto-connection
@@ -328,25 +346,25 @@ const handleMouseMove = (event: MouseEvent) => {
              worldPos.y <= shape.y + shape.height + margin
     })
     
-    if (nearbyShape) {
+    if (nearbyShape && storeArrow) {
       const connectionPoint = diagramStore.getClosestConnectionPoint(nearbyShape, worldPos.x, worldPos.y)
       if (endpoint === 'start') {
-        arrow.startX = connectionPoint.x
-        arrow.startY = connectionPoint.y
-        arrow.startShapeId = nearbyShape.id
-        console.log('Auto-connected start to shape:', nearbyShape.id)
+        storeArrow.startX = connectionPoint.x
+        storeArrow.startY = connectionPoint.y
+        storeArrow.startShapeId = nearbyShape.id
+        console.log('🔵 Auto-connected start to shape:', nearbyShape.id)
       } else {
-        arrow.endX = connectionPoint.x
-        arrow.endY = connectionPoint.y
-        arrow.endShapeId = nearbyShape.id
-        console.log('Auto-connected end to shape:', nearbyShape.id)
+        storeArrow.endX = connectionPoint.x
+        storeArrow.endY = connectionPoint.y
+        storeArrow.endShapeId = nearbyShape.id
+        console.log('🔵 Auto-connected end to shape:', nearbyShape.id)
       }
-    } else {
+    } else if (storeArrow) {
       // Clear connection if not near any shape
       if (endpoint === 'start') {
-        arrow.startShapeId = undefined
+        storeArrow.startShapeId = undefined
       } else {
-        arrow.endShapeId = undefined
+        storeArrow.endShapeId = undefined
       }
     }
   } else if (isMovingArrow.value && selection.selectedArrowIds.value.length > 0) {

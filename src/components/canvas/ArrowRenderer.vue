@@ -41,51 +41,35 @@
     
     <!-- Start/End Handles -->
     <g v-if="isSelected">
-      <!-- Invisible larger interaction area for start handle -->
+      <!-- Interactive start handle (combined visible + interactive) -->
       <circle
         :cx="arrow.startX"
         :cy="arrow.startY"
-        :r="Math.max(12, 16 / props.zoom)"
-        fill="transparent"
-        style="cursor: move; pointer-events: all;"
-        @mousedown.stop.prevent="handleDragStart('start', $event)"
-        @click.stop.prevent
-        @mouseenter.stop="isHoveringHandle = true"
-        @mouseleave.stop="isHoveringHandle = false"
-      />
-      <!-- Visible start handle -->
-      <circle
-        :cx="arrow.startX"
-        :cy="arrow.startY"
-        :r="Math.max(8, 12 / props.zoom)"
+        :r="Math.max(10, 14 / props.zoom)"
         :fill="arrow.startShapeId ? '#ef4444' : '#10b981'"
         stroke="white"
         :stroke-width="Math.max(2, 4 / props.zoom)"
         :class="['arrow-handle', { 'linked': arrow.startShapeId, 'draggable': !arrow.startShapeId }]"
-        style="pointer-events: none;"
-      />
-      <!-- Invisible larger interaction area for end handle -->
-      <circle
-        :cx="arrow.endX"
-        :cy="arrow.endY"
-        :r="Math.max(12, 16 / props.zoom)"
-        fill="transparent"
-        style="cursor: move; pointer-events: all;"
-        @mousedown.stop.prevent="handleDragStart('end', $event)"
-        @click.stop.prevent
+        style="cursor: grab; pointer-events: all;"
+        @mousedown.stop.prevent="(e) => { console.log('🟢 Start handle mousedown'); handleDragStart('start', e); }"
+        @click.stop.prevent="() => console.log('🟢 Start handle clicked')"
         @mouseenter.stop="isHoveringHandle = true"
         @mouseleave.stop="isHoveringHandle = false"
       />
-      <!-- Visible end handle -->
+      <!-- Interactive end handle (combined visible + interactive) -->
       <circle
         :cx="arrow.endX"
         :cy="arrow.endY"
-        :r="Math.max(8, 12 / props.zoom)"
+        :r="Math.max(10, 14 / props.zoom)"
         :fill="arrow.endShapeId ? '#ef4444' : '#10b981'"
         stroke="white"
         :stroke-width="Math.max(2, 4 / props.zoom)"
         :class="['arrow-handle', { 'linked': arrow.endShapeId, 'draggable': !arrow.endShapeId }]"
-        style="pointer-events: none;"
+        style="cursor: grab; pointer-events: all;"
+        @mousedown.stop.prevent="(e) => { console.log('🟢 End handle mousedown'); handleDragStart('end', e); }"
+        @click.stop.prevent="() => console.log('🟢 End handle clicked')"
+        @mouseenter.stop="isHoveringHandle = true"
+        @mouseleave.stop="isHoveringHandle = false"
       />
     </g>
   </g>
