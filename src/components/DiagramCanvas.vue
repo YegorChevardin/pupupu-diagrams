@@ -126,7 +126,6 @@
         @update:stroke="updateSelectedStroke"
         @update:stroke-width="updateSelectedStrokeWidth"
         @update:rotation="updateSelectedRotation"
-        @rotate="rotateSelected"
       />
   </div>
 </template>
@@ -241,6 +240,11 @@ const resizeDrawingPathHandle = ref('')
 const handleDrawingPathStartResize = (drawingPath: DrawingPath, handle: string, event: MouseEvent) => {
   event.stopPropagation()
   event.preventDefault()
+  
+  // Reset rotation during resize to avoid coordinate transformation issues
+  if (drawingPath.rotation) {
+    diagramStore.setElementRotation('drawingPath', drawingPath.id, 0)
+  }
   
   isResizingDrawingPath.value = true
   resizingDrawingPath.value = drawingPath
@@ -760,6 +764,11 @@ const startResize = (event: MouseEvent, handleType: string) => {
   event.stopPropagation()
   if (!diagramStore.selectedShape) return
   
+  // Reset rotation during resize to avoid coordinate transformation issues
+  if (diagramStore.selectedShape.rotation) {
+    diagramStore.setElementRotation('shape', diagramStore.selectedShape.id, 0)
+  }
+  
   const rect = svgCanvas.value!.getBoundingClientRect()
   const screenX = event.clientX - rect.left
   const screenY = event.clientY - rect.top
@@ -1022,28 +1031,6 @@ const updateSelectedRotation = (rotation: number) => {
   })
   selection.selectedDrawingPathIds.value.forEach(pathId => {
     diagramStore.setElementRotation('drawingPath', pathId, rotation)
-  })
-}
-
-const rotateSelected = (angle: number) => {
-  if (diagramStore.selectedShape) {
-    diagramStore.rotateElement('shape', diagramStore.selectedShape.id, angle)
-  }
-  if (diagramStore.selectedArrow) {
-    diagramStore.rotateElement('arrow', diagramStore.selectedArrow.id, angle)
-  }
-  if (diagramStore.selectedDrawingPath) {
-    diagramStore.rotateElement('drawingPath', diagramStore.selectedDrawingPath.id, angle)
-  }
-  // Rotate multi-selected elements
-  selection.selectedShapeIds.value.forEach(shapeId => {
-    diagramStore.rotateElement('shape', shapeId, angle)
-  })
-  selection.selectedArrowIds.value.forEach(arrowId => {
-    diagramStore.rotateElement('arrow', arrowId, angle)
-  })
-  selection.selectedDrawingPathIds.value.forEach(pathId => {
-    diagramStore.rotateElement('drawingPath', pathId, angle)
   })
 }
 

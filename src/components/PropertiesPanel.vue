@@ -40,20 +40,6 @@
       <div v-if="elementType !== null" class="property-group">
         <label class="property-label">Rotation</label>
         <div class="rotation-controls">
-          <button 
-            class="rotation-btn"
-            @click="$emit('rotate', -15)"
-            title="Rotate Left 15°"
-          >
-            ↺ 15°
-          </button>
-          <button 
-            class="rotation-btn"
-            @click="$emit('rotate', -45)"
-            title="Rotate Left 45°"
-          >
-            ↺ 45°
-          </button>
           <input 
             type="number" 
             :value="rotation || 0" 
@@ -64,20 +50,6 @@
             step="1"
             title="Rotation (degrees)"
           />
-          <button 
-            class="rotation-btn"
-            @click="$emit('rotate', 45)"
-            title="Rotate Right 45°"
-          >
-            ↻ 45°
-          </button>
-          <button 
-            class="rotation-btn"
-            @click="$emit('rotate', 15)"
-            title="Rotate Right 15°"
-          >
-            ↻ 15°
-          </button>
         </div>
       </div>
       
@@ -185,7 +157,6 @@ interface Emits {
   (e: 'update:stroke', color: string): void
   (e: 'update:strokeWidth', width: number): void
   (e: 'update:rotation', rotation: number): void
-  (e: 'rotate', angle: number): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -430,20 +401,7 @@ const decreaseFontSize = () => {
   align-items: center;
 }
 
-.rotation-btn {
-  padding: 4px 8px;
-  border: 1px solid #ddd;
-  background: white;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 10px;
-  font-weight: 500;
-  min-width: 35px;
-}
 
-.rotation-btn:hover {
-  background: #f5f5f5;
-}
 
 .rotation-input {
   width: 50px;
