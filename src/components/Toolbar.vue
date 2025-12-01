@@ -12,6 +12,39 @@
       </button>
     </div>
     
+    <!-- Drawing Style Controls (only show when pencil tool is selected) -->
+    <template v-if="diagramStore.tool === 'pencil'">
+      <div class="divider"></div>
+      
+      <div class="tool-group drawing-styles">
+        <div class="style-control">
+          <label>Color:</label>
+          <input 
+            type="color" 
+            :value="diagramStore.currentDrawingColor" 
+            @input="updateDrawingColor"
+            class="color-picker"
+            title="Drawing Color"
+          />
+        </div>
+        
+        <div class="style-control">
+          <label>Style:</label>
+          <div class="stroke-width-options">
+            <button
+              v-for="option in strokeWidthOptions"
+              :key="option.value"
+              :class="['stroke-btn', { active: diagramStore.currentDrawingStrokeWidth === option.value }]"
+              @click="updateDrawingStrokeWidth(option.value)"
+              :title="option.name"
+            >
+              <div class="stroke-preview" :style="{ height: `${option.preview}px` }"></div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+    
     <div class="divider"></div>
     
     <div class="tool-group secondary">
@@ -195,6 +228,22 @@ const loadFromFile = (event: Event) => {
   reader.readAsText(file)
 }
 
+// Drawing style controls
+const strokeWidthOptions = [
+  { value: 1, name: 'Thin', preview: 1 },
+  { value: 2, name: 'Medium', preview: 2 },
+  { value: 4, name: 'Thick', preview: 4 }
+]
+
+const updateDrawingColor = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  diagramStore.setDrawingColor(target.value)
+}
+
+const updateDrawingStrokeWidth = (width: number) => {
+  diagramStore.setDrawingStrokeWidth(width)
+}
+
 
 </script>
 
@@ -298,5 +347,79 @@ const loadFromFile = (event: Event) => {
 
 .tool-btn svg {
   pointer-events: none;
+}
+
+/* Drawing Style Controls */
+.drawing-styles {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.style-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.style-control label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.color-picker {
+  width: 36px;
+  height: 36px;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+  overflow: hidden;
+}
+
+.color-picker:hover {
+  border-color: #cbd5e1;
+}
+
+.stroke-width-options {
+  display: flex;
+  gap: 4px;
+}
+
+.stroke-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.stroke-btn:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.stroke-btn.active {
+  border-color: #3b82f6;
+  background: #dbeafe;
+}
+
+.stroke-preview {
+  width: 20px;
+  background: #64748b;
+  border-radius: 2px;
+  transition: all 0.15s ease;
+}
+
+.stroke-btn.active .stroke-preview {
+  background: #3b82f6;
 }
 </style>

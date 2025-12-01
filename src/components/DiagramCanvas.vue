@@ -114,8 +114,8 @@
         :show-shape-controls="shouldShowShapeControls"
         :font-size="currentFontSizeForPanel"
         :selected-fill="selectedShape?.fill || 'white'"
-        :selected-stroke="selectedArrow?.stroke || '#000000'"
-        :stroke-width="selectedArrow?.strokeWidth || 1"
+        :selected-stroke="selectedArrow?.stroke || selectedDrawingPath?.stroke || '#000000'"
+        :stroke-width="selectedArrow?.strokeWidth || selectedDrawingPath?.strokeWidth || 1"
         @close="hidePropertiesPanel"
         @update:font-size="updateSelectedFontSize"
         @update:fill="updateSelectedFill"
@@ -710,6 +710,9 @@ const selectedElementType = computed(() => {
   if (diagramStore.selectedArrow) {
     return 'arrow'
   }
+  if (diagramStore.selectedDrawingPath) {
+    return 'drawingPath'
+  }
   return null
 })
 
@@ -726,6 +729,7 @@ const shouldShowShapeControls = computed(() => {
 
 const selectedShape = computed(() => diagramStore.selectedShape)
 const selectedArrow = computed(() => diagramStore.selectedArrow)
+const selectedDrawingPath = computed(() => diagramStore.selectedDrawingPath)
 
 const selectedShapeForHandles = computed(() => {
   if (!diagramStore.selectedShape) return null
@@ -840,13 +844,23 @@ const updateSelectedStroke = (color: string) => {
     ;(diagramStore.selectedArrow as any).stroke = color
     diagramStore.saveToLocalStorage()
   }
+  if (diagramStore.selectedDrawingPath) {
+    ;(diagramStore.selectedDrawingPath as any).stroke = color
+    diagramStore.saveToLocalStorage()
+  }
   selection.selectedArrowIds.value.forEach(arrowId => {
     const arrow = diagramStore.arrows.find(a => a.id === arrowId)
     if (arrow) {
       ;(arrow as any).stroke = color
     }
   })
-  if (selection.selectedArrowIds.value.length > 0) {
+  selection.selectedDrawingPathIds.value.forEach(pathId => {
+    const path = diagramStore.drawingPaths.find(p => p.id === pathId)
+    if (path) {
+      ;(path as any).stroke = color
+    }
+  })
+  if (selection.selectedArrowIds.value.length > 0 || selection.selectedDrawingPathIds.value.length > 0) {
     diagramStore.saveToLocalStorage()
   }
 }
@@ -856,13 +870,23 @@ const updateSelectedStrokeWidth = (width: number) => {
     ;(diagramStore.selectedArrow as any).strokeWidth = width
     diagramStore.saveToLocalStorage()
   }
+  if (diagramStore.selectedDrawingPath) {
+    ;(diagramStore.selectedDrawingPath as any).strokeWidth = width
+    diagramStore.saveToLocalStorage()
+  }
   selection.selectedArrowIds.value.forEach(arrowId => {
     const arrow = diagramStore.arrows.find(a => a.id === arrowId)
     if (arrow) {
       ;(arrow as any).strokeWidth = width
     }
   })
-  if (selection.selectedArrowIds.value.length > 0) {
+  selection.selectedDrawingPathIds.value.forEach(pathId => {
+    const path = diagramStore.drawingPaths.find(p => p.id === pathId)
+    if (path) {
+      ;(path as any).strokeWidth = width
+    }
+  })
+  if (selection.selectedArrowIds.value.length > 0 || selection.selectedDrawingPathIds.value.length > 0) {
     diagramStore.saveToLocalStorage()
   }
 }

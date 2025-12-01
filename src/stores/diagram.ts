@@ -60,6 +60,10 @@ export const useDiagramStore = defineStore('diagram', () => {
   const selectedDrawingPath = ref<DrawingPath | null>(null)
   const tool = ref<Tool>('select')
   
+  // Drawing style properties
+  const currentDrawingColor = ref<string>('#000000')
+  const currentDrawingStrokeWidth = ref<number>(2) // 1=thin, 2=medium, 4=thick
+  
   // Connection state for dot-to-dot arrow creation
   const connectionState = ref<{
     isConnecting: boolean
@@ -257,6 +261,8 @@ export const useDiagramStore = defineStore('diagram', () => {
       id: generateId(),
       selected: false,
       createdAt: Date.now(),
+      stroke: pathData.stroke || currentDrawingColor.value,
+      strokeWidth: pathData.strokeWidth || currentDrawingStrokeWidth.value,
       minX,
       minY,
       maxX,
@@ -636,6 +642,14 @@ export const useDiagramStore = defineStore('diagram', () => {
     }
   }
 
+  const setDrawingColor = (color: string) => {
+    currentDrawingColor.value = color
+  }
+
+  const setDrawingStrokeWidth = (width: number) => {
+    currentDrawingStrokeWidth.value = width
+  }
+
   const generateId = () => {
     return Math.random().toString(36).substr(2, 9)
   }
@@ -684,6 +698,10 @@ export const useDiagramStore = defineStore('diagram', () => {
     convertArrowToCurved,
     addControlPoint,
     updateControlPoint,
-    removeControlPoint
+    removeControlPoint,
+    currentDrawingColor,
+    currentDrawingStrokeWidth,
+    setDrawingColor,
+    setDrawingStrokeWidth
   }
 })

@@ -36,6 +36,44 @@
         </div>
       </div>
       
+      <!-- Drawing Path Properties -->
+      <div v-if="elementType === 'drawingPath'" class="property-group">
+        <label class="property-label">Drawing Color</label>
+        <div class="color-options">
+          <input 
+            type="color" 
+            :value="selectedStroke" 
+            @input="$emit('update:stroke', ($event.target as HTMLInputElement).value)"
+            class="color-picker"
+          />
+        </div>
+        
+        <label class="property-label">Line Style</label>
+        <div class="line-options">
+          <button 
+            class="line-option"
+            :class="{ active: strokeWidth === 1 }"
+            @click="$emit('update:strokeWidth', 1)"
+          >
+            Thin
+          </button>
+          <button 
+            class="line-option"
+            :class="{ active: strokeWidth === 2 }"
+            @click="$emit('update:strokeWidth', 2)"
+          >
+            Medium
+          </button>
+          <button 
+            class="line-option"
+            :class="{ active: strokeWidth === 4 }"
+            @click="$emit('update:strokeWidth', 4)"
+          >
+            Thick
+          </button>
+        </div>
+      </div>
+      
       <!-- Arrow Properties -->
       <div v-if="elementType === 'arrow'" class="property-group">
         <label class="property-label">Line Style</label>
@@ -85,7 +123,7 @@ import { computed } from 'vue'
 interface Props {
   visible: boolean
   position: { x: number; y: number }
-  elementType: 'text' | 'shape' | 'arrow' | null
+  elementType: 'text' | 'shape' | 'arrow' | 'drawingPath' | null
   showTextControls?: boolean
   showShapeControls?: boolean
   fontSize?: number
@@ -283,6 +321,15 @@ const decreaseFontSize = () => {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.color-picker {
+  width: 40px;
+  height: 30px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
 }
 
 .color-option {

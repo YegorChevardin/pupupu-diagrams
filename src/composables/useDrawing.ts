@@ -49,9 +49,8 @@ export function useDrawing() {
         pencilPoints.value.push(worldPos)
         
         diagramStore.addDrawingPath({
-          points: [...pencilPoints.value],
-          stroke: '#000000', // Default color, can be customized later
-          strokeWidth: 2 // Default width, can be customized later
+          points: [...pencilPoints.value]
+          // stroke and strokeWidth will be set by the store from current drawing properties
         })
       }
       
