@@ -13,6 +13,16 @@ export function useGeometry() {
             y >= shape.y && y <= shape.y + shape.height) {
           return shape
         }
+      } else if (shape.type === 'circle') {
+        const centerX = shape.x + shape.width / 2
+        const centerY = shape.y + shape.height / 2
+        const radiusX = shape.width / 2
+        const radiusY = shape.height / 2
+        const dx = (x - centerX) / radiusX
+        const dy = (y - centerY) / radiusY
+        if (dx * dx + dy * dy <= 1) {
+          return shape
+        }
       } else if (shape.type === 'text') {
         const textWidth = (shape.text?.length || 20) * (shape.fontSize || 14) * 0.6
         const textHeight = shape.fontSize || 14

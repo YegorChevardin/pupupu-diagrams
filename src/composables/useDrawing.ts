@@ -107,7 +107,7 @@ export function useDrawing() {
           y: Math.min(startPoint.value.y, worldPos.y),
           width,
           height,
-          type: diagramStore.tool as 'rectangle' | 'text'
+          type: diagramStore.tool as 'rectangle' | 'circle' | 'text'
         }
         
         if (diagramStore.tool === 'text') {

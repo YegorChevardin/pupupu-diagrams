@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export type Tool = 'select' | 'rectangle' | 'text' | 'arrow' | 'pencil'
+export type Tool = 'select' | 'rectangle' | 'circle' | 'text' | 'arrow' | 'pencil'
 
 export interface Shape {
   id: string
-  type: 'rectangle' | 'text'
+  type: 'rectangle' | 'circle' | 'text'
   x: number
   y: number
   width: number

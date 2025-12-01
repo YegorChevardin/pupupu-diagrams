@@ -25,6 +25,19 @@
       @dblclick="$emit('editText', shape)"
     />
     
+    <ellipse
+      v-if="shape.type === 'circle'"
+      :cx="shape.x + shape.width / 2"
+      :cy="shape.y + shape.height / 2"
+      :rx="shape.width / 2"
+      :ry="shape.height / 2"
+      :fill="shape.fill || 'white'"
+      :stroke="isSelected ? '#0078d4' : '#cccccc'"
+      :stroke-width="isSelected ? Math.max(1, 2 / props.zoom) : Math.max(0.5, 1 / props.zoom)"
+      @click="$emit('select', shape, $event)"
+      @dblclick="$emit('editText', shape)"
+    />
+    
     <path
       v-if="shape.type === 'text' && isSelected"
       :x="shape.x - Math.max(2, 4 / props.zoom)"
@@ -52,7 +65,7 @@
     </text>
     
     <text
-      v-if="shape.type === 'rectangle' && shape.text"
+      v-if="(shape.type === 'rectangle' || shape.type === 'circle') && shape.text"
       :x="shape.x + shape.width / 2"
       :y="shape.y + shape.height / 2"
       :fill="isSelected ? '#0078d4' : '#000000'"

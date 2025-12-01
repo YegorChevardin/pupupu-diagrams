@@ -88,6 +88,10 @@ const RectangleIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 2
   h('rect', { x: 3, y: 3, width: 18, height: 18, rx: 2, ry: 2, stroke: 'currentColor', 'stroke-width': 2 })
 ])
 
+const CircleIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none' }, [
+  h('circle', { cx: 12, cy: 12, r: 9, stroke: 'currentColor', 'stroke-width': 2 })
+])
+
 const TextIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none' }, [
   h('path', { d: 'M4 7V4H20V7', stroke: 'currentColor', 'stroke-width': 2 }),
   h('path', { d: 'M9 20H15', stroke: 'currentColor', 'stroke-width': 2 }),
@@ -123,6 +127,7 @@ const PencilIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24',
 const tools = [
   { id: 'select', name: 'Select', icon: SelectIcon },
   { id: 'rectangle', name: 'Rectangle', icon: RectangleIcon },
+  { id: 'circle', name: 'Circle', icon: CircleIcon },
   { id: 'text', name: 'Text', icon: TextIcon },
   { id: 'arrow', name: 'Arrow', icon: ArrowIcon },
   { id: 'pencil', name: 'Pencil', icon: PencilIcon }
