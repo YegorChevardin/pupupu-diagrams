@@ -120,6 +120,7 @@
         :selected-stroke="selectedArrow?.stroke || selectedDrawingPath?.stroke || '#000000'"
         :stroke-width="selectedArrow?.strokeWidth || selectedDrawingPath?.strokeWidth || 1"
         :rotation="selectedShape?.rotation || selectedArrow?.rotation || selectedDrawingPath?.rotation || 0"
+        :rotation-disabled="isRotationDisabled"
         @close="hidePropertiesPanel"
         @update:font-size="updateSelectedFontSize"
         @update:fill="updateSelectedFill"
@@ -196,23 +197,17 @@ watch(() => diagramStore.tool, () => {
 
 const handleArrowSelect = (arrow: Arrow, event?: MouseEvent) => {
   selection.selectArrow(arrow, event)
-  if (event) {
-    showPropertiesPanelFor(arrow)
-  }
+  showPropertiesPanelFor(arrow)
 }
 
 const handleShapeSelect = (shape: Shape, event?: MouseEvent) => {
   selection.selectShape(shape, event)
-  if (event) {
-    showPropertiesPanelFor(shape)
-  }
+  showPropertiesPanelFor(shape)
 }
 
 const handleDrawingPathSelect = (drawingPath: DrawingPath, event?: MouseEvent) => {
   selection.selectDrawingPath(drawingPath, event)
-  if (event) {
-    showPropertiesPanelFor(drawingPath)
-  }
+  showPropertiesPanelFor(drawingPath)
 }
 
 const isDrawingPathDragging = ref(false)
@@ -343,6 +338,12 @@ const handleShapeStartRotate = (shape: Shape, event: MouseEvent) => {
 const handleArrowStartRotate = (arrow: Arrow, event: MouseEvent) => {
   event.stopPropagation()
   event.preventDefault()
+  
+  // Prevent rotation if arrow is connected to any shape or drawing path
+  if (arrow.startShapeId || arrow.endShapeId) {
+    console.log('Cannot rotate connected arrow')
+    return
+  }
   
   const rect = svgCanvas.value!.getBoundingClientRect()
   const screenX = event.clientX - rect.left
@@ -867,6 +868,14 @@ const currentFontSizeForPanel = computed(() => {
   return 14
 })
 
+const isRotationDisabled = computed(() => {
+  // Disable rotation for connected arrows
+  if (selectedArrow.value) {
+    return !!(selectedArrow.value.startShapeId || selectedArrow.value.endShapeId)
+  }
+  return false
+})
+
 const allElementsSorted = computed(() => {
   const elements: Array<(Shape & { elementType: 'shape' }) | (Arrow & { elementType: 'arrow' }) | (DrawingPath & { elementType: 'drawingPath' })> = []
   
@@ -899,30 +908,13 @@ const updateCurrentFontSize = (newSize: number) => {
 
 
 const showPropertiesPanelFor = (element: Shape | Arrow | DrawingPath) => {
-  const canvasRect = svgCanvas.value?.getBoundingClientRect()
-  if (!canvasRect) return
-
-  let elementX, elementY
-  
-  if ('type' in element) {
-    elementX = element.x * canvasInteraction.zoom.value + canvasInteraction.panX.value
-    elementY = element.y * canvasInteraction.zoom.value + canvasInteraction.panY.value
-  } else if ('startX' in element) {
-    elementX = element.startX * canvasInteraction.zoom.value + canvasInteraction.panX.value
-    elementY = element.startY * canvasInteraction.zoom.value + canvasInteraction.panY.value
-  } else {
-    elementX = (element.minX || 0) * canvasInteraction.zoom.value + canvasInteraction.panX.value
-    elementY = (element.minY || 0) * canvasInteraction.zoom.value + canvasInteraction.panY.value
-  }
-  
-  const panelWidth = 220;
-  const panelHeight = 120;
-  const screenX = canvasRect.left + elementX;
-  const screenY = canvasRect.top + elementY;
+  // Position panel in top left corner under the toolbar
+  const toolbarHeight = window.innerWidth <= 768 ? 50 : 60 // Mobile vs desktop header height
+  const panelMargin = 20
   
   propertiesPanelPosition.value = {
-    x: Math.max(10, Math.min(window.innerWidth - panelWidth - 10, screenX - 10)),
-    y: Math.max(10, screenY - panelHeight - 20)
+    x: panelMargin,
+    y: toolbarHeight + panelMargin
   }
   showPropertiesPanel.value = true
 }
@@ -1017,6 +1009,11 @@ const updateSelectedRotation = (rotation: number) => {
     diagramStore.setElementRotation('shape', diagramStore.selectedShape.id, rotation)
   }
   if (diagramStore.selectedArrow) {
+    // Prevent rotation of connected arrows
+    if (diagramStore.selectedArrow.startShapeId || diagramStore.selectedArrow.endShapeId) {
+      console.log('Cannot rotate connected arrow')
+      return
+    }
     diagramStore.setElementRotation('arrow', diagramStore.selectedArrow.id, rotation)
   }
   if (diagramStore.selectedDrawingPath) {
@@ -1027,7 +1024,11 @@ const updateSelectedRotation = (rotation: number) => {
     diagramStore.setElementRotation('shape', shapeId, rotation)
   })
   selection.selectedArrowIds.value.forEach(arrowId => {
-    diagramStore.setElementRotation('arrow', arrowId, rotation)
+    const arrow = diagramStore.arrows.find(a => a.id === arrowId)
+    // Skip connected arrows
+    if (arrow && !arrow.startShapeId && !arrow.endShapeId) {
+      diagramStore.setElementRotation('arrow', arrowId, rotation)
+    }
   })
   selection.selectedDrawingPathIds.value.forEach(pathId => {
     diagramStore.setElementRotation('drawingPath', pathId, rotation)

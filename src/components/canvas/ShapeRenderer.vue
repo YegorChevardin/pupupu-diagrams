@@ -26,25 +26,6 @@
     />
     
     <path
-      v-if="shape.type === 'diamond' && isSelected"
-      :d="getDiamondOutlinePath(shape, props.zoom)"
-      fill="none"
-      stroke="#0078d4"
-      :stroke-width="Math.max(1, 2 / props.zoom)"
-      :stroke-dasharray="`${Math.max(2, 4 / props.zoom)},${Math.max(2, 4 / props.zoom)}`"
-    />
-    
-    <path
-      v-if="shape.type === 'diamond'"
-      :d="getDiamondPath(shape)"
-      :fill="shape.fill || 'white'"
-      :stroke="isSelected ? '#0078d4' : '#cccccc'"
-      :stroke-width="isSelected ? Math.max(1, 2 / props.zoom) : Math.max(0.5, 1 / props.zoom)"
-      @click="$emit('select', shape, $event)"
-      @dblclick="$emit('editText', shape)"
-    />
-    
-    <rect
       v-if="shape.type === 'text' && isSelected"
       :x="shape.x - Math.max(2, 4 / props.zoom)"
       :y="shape.y - (shape.fontSize ?? 14) - Math.max(1, 2 / props.zoom)"
@@ -85,20 +66,7 @@
       {{ shape.text }}
     </text>
     
-    <text
-      v-if="shape.type === 'diamond' && shape.text"
-      :x="shape.x + shape.width / 2"
-      :y="shape.y + shape.height / 2"
-      :fill="isSelected ? '#0078d4' : '#000000'"
-      :font-size="shape.fontSize ?? 14"
-      text-anchor="middle"
-      dominant-baseline="middle"
-      @click="$emit('select', shape, $event)"
-      @dblclick="$emit('editText', shape)"
-      class="shape-text"
-    >
-      {{ shape.text }}
-    </text>
+
     
     <!-- Rotation Handle -->
     <g v-if="isSelected">
@@ -141,25 +109,6 @@ defineEmits<{
   editText: [shape: Shape]
   startRotate: [shape: Shape, event: MouseEvent]
 }>()
-
-const getDiamondPath = (shape: Shape) => {
-  const cx = shape.x + shape.width / 2
-  const cy = shape.y + shape.height / 2
-  const hw = shape.width / 2
-  const hh = shape.height / 2
-  
-  return `M ${cx} ${cy - hh} L ${cx + hw} ${cy} L ${cx} ${cy + hh} L ${cx - hw} ${cy} Z`
-}
-
-const getDiamondOutlinePath = (shape: Shape, zoom: number = 1) => {
-  const cx = shape.x + shape.width / 2
-  const cy = shape.y + shape.height / 2
-  const offset = Math.max(1, 2 / zoom)
-  const hw = shape.width / 2 + offset
-  const hh = shape.height / 2 + offset
-  
-  return `M ${cx} ${cy - hh} L ${cx + hw} ${cy} L ${cx} ${cy + hh} L ${cx - hw} ${cy} Z`
-}
 
 const getShapeTransform = (shape: Shape) => {
   if (!shape.rotation) return ''

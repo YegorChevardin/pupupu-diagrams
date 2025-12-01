@@ -73,8 +73,8 @@
       />
     </g>
     
-    <!-- Rotation Handle -->
-    <g v-if="isSelected">
+    <!-- Rotation Handle (only for unconnected arrows) -->
+    <g v-if="isSelected && !arrow.startShapeId && !arrow.endShapeId">
       <line
         :x1="(arrow.startX + arrow.endX) / 2"
         :y1="Math.min(arrow.startY, arrow.endY) - Math.max(15, 30 / props.zoom)"

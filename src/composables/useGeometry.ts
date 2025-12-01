@@ -13,17 +13,6 @@ export function useGeometry() {
             y >= shape.y && y <= shape.y + shape.height) {
           return shape
         }
-      } else if (shape.type === 'diamond') {
-        const cx = shape.x + shape.width / 2
-        const cy = shape.y + shape.height / 2
-        const hw = shape.width / 2
-        const hh = shape.height / 2
-        
-        const dx = Math.abs(x - cx) / hw
-        const dy = Math.abs(y - cy) / hh
-        if (dx + dy <= 1) {
-          return shape
-        }
       } else if (shape.type === 'text') {
         const textWidth = (shape.text?.length || 20) * (shape.fontSize || 14) * 0.6
         const textHeight = shape.fontSize || 14

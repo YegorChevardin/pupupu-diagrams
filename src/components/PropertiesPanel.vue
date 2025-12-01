@@ -4,7 +4,6 @@
     class="properties-panel"
     :style="{ left: position.x + 'px', top: position.y + 'px' }"
   >
-    <div class="panel-pointer"></div>
     <div class="panel-header">
       <span class="panel-title">{{ title }}</span>
       <button @click="$emit('close')" class="close-btn">×</button>
@@ -45,10 +44,12 @@
             :value="rotation || 0" 
             @input="$emit('update:rotation', parseFloat(($event.target as HTMLInputElement).value))"
             class="rotation-input"
+            :class="{ disabled: rotationDisabled }"
             min="0"
             max="359"
             step="1"
-            title="Rotation (degrees)"
+            :disabled="rotationDisabled"
+            :title="rotationDisabled ? 'Cannot rotate connected arrows' : 'Rotation (degrees)'"
           />
         </div>
       </div>
@@ -148,6 +149,7 @@ interface Props {
   selectedStroke?: string
   strokeWidth?: number
   rotation?: number
+  rotationDisabled?: boolean
 }
 
 interface Emits {
@@ -166,7 +168,8 @@ const props = withDefaults(defineProps<Props>(), {
   selectedFill: 'white',
   selectedStroke: '#000000',
   strokeWidth: 1,
-  rotation: 0
+  rotation: 0,
+  rotationDisabled: false
 })
 
 const emit = defineEmits<Emits>()
@@ -224,30 +227,7 @@ const decreaseFontSize = () => {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.panel-pointer {
-  position: absolute;
-  bottom: -8px;
-  left: 20px;
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 8px solid white;
-  z-index: 1001;
-}
 
-.panel-pointer::before {
-  content: '';
-  position: absolute;
-  bottom: 1px;
-  left: -9px;
-  width: 0;
-  height: 0;
-  border-left: 9px solid transparent;
-  border-right: 9px solid transparent;
-  border-top: 9px solid #e0e0e0;
-  z-index: -1;
-}
 
 .panel-header {
   display: flex;
@@ -410,5 +390,13 @@ const decreaseFontSize = () => {
   border-radius: 4px;
   font-size: 11px;
   text-align: center;
+}
+
+.rotation-input:disabled,
+.rotation-input.disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 </style>
