@@ -16,6 +16,7 @@ export interface Shape {
   fill?: string
   stroke?: string
   strokeWidth?: number
+  rotation?: number
   createdAt?: number
 }
 
@@ -28,6 +29,7 @@ export interface Arrow {
   selected?: boolean
   stroke?: string
   strokeWidth?: number
+  rotation?: number
   createdAt?: number
   startShapeId?: string
   endShapeId?: string
@@ -41,6 +43,7 @@ export interface DrawingPath {
   selected?: boolean
   stroke?: string
   strokeWidth?: number
+  rotation?: number
   createdAt?: number
   // Bounding box for interaction
   minX?: number
@@ -60,11 +63,9 @@ export const useDiagramStore = defineStore('diagram', () => {
   const selectedDrawingPath = ref<DrawingPath | null>(null)
   const tool = ref<Tool>('select')
   
-  // Drawing style properties
   const currentDrawingColor = ref<string>('#000000')
-  const currentDrawingStrokeWidth = ref<number>(2) // 1=thin, 2=medium, 4=thick
+  const currentDrawingStrokeWidth = ref<number>(2)
   
-  // Connection state for dot-to-dot arrow creation
   const connectionState = ref<{
     isConnecting: boolean
     startPoint: { x: number, y: number, shapeId: string, dotId: string } | null
@@ -147,6 +148,59 @@ export const useDiagramStore = defineStore('diagram', () => {
         { x: left, y: bottom, id: 'bottom-left' },
         { x: left, y: centerY, id: 'left-center' }
       )
+    }
+    
+    // Apply rotation transformation to connection points if shape is rotated
+    if (shape.rotation && shape.rotation !== 0) {
+      const rotation = (shape.rotation * Math.PI) / 180 // Convert to radians
+      const shapeCenterX = shape.type === 'text' 
+        ? shape.x + ((shape.text?.length || 20) * (shape.fontSize ?? 14) * 0.6) / 2
+        : shape.x + shape.width / 2
+      const shapeCenterY = shape.type === 'text'
+        ? shape.y - (shape.fontSize ?? 14) / 2
+        : shape.y + shape.height / 2
+      
+      // Rotate each point around the shape's center
+      for (const point of points) {
+        const dx = point.x - shapeCenterX
+        const dy = point.y - shapeCenterY
+        
+        const rotatedX = dx * Math.cos(rotation) - dy * Math.sin(rotation)
+        const rotatedY = dx * Math.sin(rotation) + dy * Math.cos(rotation)
+        
+        point.x = rotatedX + shapeCenterX
+        point.y = rotatedY + shapeCenterY
+      }
+    }
+    
+    return points
+  }
+
+  const getDrawingPathConnectionPoints = (drawingPath: DrawingPath): Array<{ x: number, y: number, id: string }> => {
+    if (!drawingPath.connectionPoints || drawingPath.connectionPoints.length === 0) {
+      return []
+    }
+    
+    // Make a copy of the connection points
+    const points = drawingPath.connectionPoints.map(point => ({ ...point }))
+    
+    // Apply rotation transformation if drawing path is rotated
+    if (drawingPath.rotation && drawingPath.rotation !== 0) {
+      const rotation = (drawingPath.rotation * Math.PI) / 180 // Convert to radians
+      const pathCenterX = ((drawingPath.minX || 0) + (drawingPath.maxX || 0)) / 2
+      const pathCenterY = ((drawingPath.minY || 0) + (drawingPath.maxY || 0)) / 2
+      
+      // Rotate each point around the drawing path's center
+      for (const point of points) {
+        const dx = point.x - pathCenterX
+        const dy = point.y - pathCenterY
+        
+        const rotatedX = dx * Math.cos(rotation) - dy * Math.sin(rotation)
+        const rotatedY = dx * Math.sin(rotation) + dy * Math.cos(rotation)
+        
+        point.x = rotatedX + pathCenterX
+        point.y = rotatedY + pathCenterY
+      }
     }
     
     return points
@@ -650,6 +704,50 @@ export const useDiagramStore = defineStore('diagram', () => {
     currentDrawingStrokeWidth.value = width
   }
 
+  const rotateElement = (elementType: 'shape' | 'arrow' | 'drawingPath', id: string, angle: number) => {
+    if (elementType === 'shape') {
+      const shape = shapes.value.find(s => s.id === id)
+      if (shape) {
+        shape.rotation = ((shape.rotation || 0) + angle) % 360
+        saveToLocalStorage()
+      }
+    } else if (elementType === 'arrow') {
+      const arrow = arrows.value.find(a => a.id === id)
+      if (arrow) {
+        arrow.rotation = ((arrow.rotation || 0) + angle) % 360
+        saveToLocalStorage()
+      }
+    } else if (elementType === 'drawingPath') {
+      const path = drawingPaths.value.find(p => p.id === id)
+      if (path) {
+        path.rotation = ((path.rotation || 0) + angle) % 360
+        saveToLocalStorage()
+      }
+    }
+  }
+
+  const setElementRotation = (elementType: 'shape' | 'arrow' | 'drawingPath', id: string, rotation: number) => {
+    if (elementType === 'shape') {
+      const shape = shapes.value.find(s => s.id === id)
+      if (shape) {
+        shape.rotation = rotation % 360
+        saveToLocalStorage()
+      }
+    } else if (elementType === 'arrow') {
+      const arrow = arrows.value.find(a => a.id === id)
+      if (arrow) {
+        arrow.rotation = rotation % 360
+        saveToLocalStorage()
+      }
+    } else if (elementType === 'drawingPath') {
+      const path = drawingPaths.value.find(p => p.id === id)
+      if (path) {
+        path.rotation = rotation % 360
+        saveToLocalStorage()
+      }
+    }
+  }
+
   const generateId = () => {
     return Math.random().toString(36).substr(2, 9)
   }
@@ -690,6 +788,7 @@ export const useDiagramStore = defineStore('diagram', () => {
     loadFromLocalStorage,
     updateShapeFontSize,
     getShapeConnectionPoints,
+    getDrawingPathConnectionPoints,
     getClosestConnectionPoint,
     connectionState,
     startConnection,
@@ -702,6 +801,8 @@ export const useDiagramStore = defineStore('diagram', () => {
     currentDrawingColor,
     currentDrawingStrokeWidth,
     setDrawingColor,
-    setDrawingStrokeWidth
+    setDrawingStrokeWidth,
+    rotateElement,
+    setElementRotation
   }
 })

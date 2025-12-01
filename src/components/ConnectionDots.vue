@@ -50,7 +50,7 @@ const connectionPoints = computed(() => {
   if (props.shape) {
     return diagramStore.getShapeConnectionPoints(props.shape)
   } else if (props.drawingPath) {
-    return props.drawingPath.connectionPoints || []
+    return diagramStore.getDrawingPathConnectionPoints(props.drawingPath)
   }
   return []
 })

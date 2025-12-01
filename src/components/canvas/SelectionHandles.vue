@@ -42,12 +42,33 @@ defineEmits<{
 const getSelectionHandles = (shape: Shape | null) => {
   if (!shape) return []
   
-  return [
+  const handles = [
     { type: 'nw', x: shape.x, y: shape.y },
     { type: 'ne', x: shape.x + shape.width, y: shape.y },
     { type: 'sw', x: shape.x, y: shape.y + shape.height },
     { type: 'se', x: shape.x + shape.width, y: shape.y + shape.height }
   ]
+  
+  // Apply rotation transformation if shape is rotated
+  if (shape.rotation && shape.rotation !== 0) {
+    const rotation = (shape.rotation * Math.PI) / 180 // Convert to radians
+    const centerX = shape.x + shape.width / 2
+    const centerY = shape.y + shape.height / 2
+    
+    // Rotate each handle around the shape's center
+    for (const handle of handles) {
+      const dx = handle.x - centerX
+      const dy = handle.y - centerY
+      
+      const rotatedX = dx * Math.cos(rotation) - dy * Math.sin(rotation)
+      const rotatedY = dx * Math.sin(rotation) + dy * Math.cos(rotation)
+      
+      handle.x = rotatedX + centerX
+      handle.y = rotatedY + centerY
+    }
+  }
+  
+  return handles
 }
 </script>
 

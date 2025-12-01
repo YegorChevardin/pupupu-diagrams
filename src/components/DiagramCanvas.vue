@@ -33,6 +33,7 @@
             @select="handleArrowSelect"
             @start-move="handleArrowStartMove"
             @start-drag="handleArrowStartDrag"
+            @start-rotate="handleArrowStartRotate"
           />
           
           <DrawingPathRenderer
@@ -43,6 +44,7 @@
             @select="handleDrawingPathSelect"
             @start-move="handleDrawingPathStartMove"
             @start-resize="handleDrawingPathStartResize"
+            @start-rotate="handleDrawingPathStartRotate"
           />
           
 
@@ -54,6 +56,7 @@
             :zoom="canvasInteraction.zoom.value"
             @select="handleShapeSelect"
             @edit-text="startTextEdit"
+            @start-rotate="handleShapeStartRotate"
           />
           
           <ConnectionDots
@@ -116,11 +119,14 @@
         :selected-fill="selectedShape?.fill || 'white'"
         :selected-stroke="selectedArrow?.stroke || selectedDrawingPath?.stroke || '#000000'"
         :stroke-width="selectedArrow?.strokeWidth || selectedDrawingPath?.strokeWidth || 1"
+        :rotation="selectedShape?.rotation || selectedArrow?.rotation || selectedDrawingPath?.rotation || 0"
         @close="hidePropertiesPanel"
         @update:font-size="updateSelectedFontSize"
         @update:fill="updateSelectedFill"
         @update:stroke="updateSelectedStroke"
         @update:stroke-width="updateSelectedStrokeWidth"
+        @update:rotation="updateSelectedRotation"
+        @rotate="rotateSelected"
       />
   </div>
 </template>
@@ -292,6 +298,97 @@ const handleArrowStartDrag = (arrow: Arrow, endpoint: 'start' | 'end', event: Mo
   }
 }
 
+// Rotation state
+const isRotating = ref(false)
+const rotationState = ref<{
+  elementType: 'shape' | 'arrow' | 'drawingPath'
+  elementId: string
+  centerX: number
+  centerY: number
+  startAngle: number
+  initialRotation: number
+} | null>(null)
+
+// Rotation handlers
+const handleShapeStartRotate = (shape: Shape, event: MouseEvent) => {
+  event.stopPropagation()
+  event.preventDefault()
+  
+  const rect = svgCanvas.value!.getBoundingClientRect()
+  const screenX = event.clientX - rect.left
+  const screenY = event.clientY - rect.top
+  const worldPos = canvasInteraction.screenToWorld(screenX, screenY)
+  
+  const centerX = shape.x + shape.width / 2
+  const centerY = shape.y + shape.height / 2
+  const startAngle = Math.atan2(worldPos.y - centerY, worldPos.x - centerX) * 180 / Math.PI
+  
+  isRotating.value = true
+  rotationState.value = {
+    elementType: 'shape',
+    elementId: shape.id,
+    centerX,
+    centerY,
+    startAngle,
+    initialRotation: shape.rotation || 0
+  }
+  
+  selection.selectShape(shape)
+}
+
+const handleArrowStartRotate = (arrow: Arrow, event: MouseEvent) => {
+  event.stopPropagation()
+  event.preventDefault()
+  
+  const rect = svgCanvas.value!.getBoundingClientRect()
+  const screenX = event.clientX - rect.left
+  const screenY = event.clientY - rect.top
+  const worldPos = canvasInteraction.screenToWorld(screenX, screenY)
+  
+  const centerX = (arrow.startX + arrow.endX) / 2
+  const centerY = (arrow.startY + arrow.endY) / 2
+  const startAngle = Math.atan2(worldPos.y - centerY, worldPos.x - centerX) * 180 / Math.PI
+  
+  isRotating.value = true
+  rotationState.value = {
+    elementType: 'arrow',
+    elementId: arrow.id,
+    centerX,
+    centerY,
+    startAngle,
+    initialRotation: arrow.rotation || 0
+  }
+  
+  selection.selectArrow(arrow)
+}
+
+const handleDrawingPathStartRotate = (drawingPath: DrawingPath, event: MouseEvent) => {
+  event.stopPropagation()
+  event.preventDefault()
+  
+  const rect = svgCanvas.value!.getBoundingClientRect()
+  const screenX = event.clientX - rect.left
+  const screenY = event.clientY - rect.top
+  const worldPos = canvasInteraction.screenToWorld(screenX, screenY)
+  
+  // Calculate bounding box center
+  const centerX = ((drawingPath.minX || 0) + (drawingPath.maxX || 0)) / 2
+  const centerY = ((drawingPath.minY || 0) + (drawingPath.maxY || 0)) / 2
+  const startAngle = Math.atan2(worldPos.y - centerY, worldPos.x - centerX) * 180 / Math.PI
+  
+  isRotating.value = true
+  rotationState.value = {
+    elementType: 'drawingPath',
+    elementId: drawingPath.id,
+    centerX,
+    centerY,
+    startAngle,
+    initialRotation: drawingPath.rotation || 0
+  }
+  
+  selection.selectDrawingPath(drawingPath)
+}
+
 const handleMouseDown = (event: MouseEvent) => {
   if (isResizing.value) return
   
@@ -387,6 +484,17 @@ const handleMouseMove = (event: MouseEvent) => {
   const screenX = event.clientX - rect.left
   const screenY = event.clientY - rect.top
   const worldPos = canvasInteraction.screenToWorld(screenX, screenY)
+  
+  // Handle rotation
+  if (isRotating.value && rotationState.value) {
+    const { centerX, centerY, startAngle, initialRotation, elementType, elementId } = rotationState.value
+    const currentAngle = Math.atan2(worldPos.y - centerY, worldPos.x - centerX) * 180 / Math.PI
+    const angleDiff = currentAngle - startAngle
+    const newRotation = (initialRotation + angleDiff + 360) % 360
+    
+    diagramStore.setElementRotation(elementType, elementId, newRotation)
+    return
+  }
   
   if (isDraggingArrow.value) {
     console.log('🔵 Mouse move during arrow drag:', {
@@ -595,7 +703,11 @@ const handleMouseUp = (event: MouseEvent) => {
   const screenY = event.clientY - rect.top
   const worldPos = canvasInteraction.screenToWorld(screenX, screenY)
 
-
+  if (isRotating.value) {
+    isRotating.value = false
+    rotationState.value = null
+    return
+  }
 
   if (drawing.isDrawing.value) {
     drawing.completeDrawing(worldPos, canvasInteraction.zoom.value)
@@ -889,6 +1001,50 @@ const updateSelectedStrokeWidth = (width: number) => {
   if (selection.selectedArrowIds.value.length > 0 || selection.selectedDrawingPathIds.value.length > 0) {
     diagramStore.saveToLocalStorage()
   }
+}
+
+const updateSelectedRotation = (rotation: number) => {
+  if (diagramStore.selectedShape) {
+    diagramStore.setElementRotation('shape', diagramStore.selectedShape.id, rotation)
+  }
+  if (diagramStore.selectedArrow) {
+    diagramStore.setElementRotation('arrow', diagramStore.selectedArrow.id, rotation)
+  }
+  if (diagramStore.selectedDrawingPath) {
+    diagramStore.setElementRotation('drawingPath', diagramStore.selectedDrawingPath.id, rotation)
+  }
+  // Update multi-selected elements
+  selection.selectedShapeIds.value.forEach(shapeId => {
+    diagramStore.setElementRotation('shape', shapeId, rotation)
+  })
+  selection.selectedArrowIds.value.forEach(arrowId => {
+    diagramStore.setElementRotation('arrow', arrowId, rotation)
+  })
+  selection.selectedDrawingPathIds.value.forEach(pathId => {
+    diagramStore.setElementRotation('drawingPath', pathId, rotation)
+  })
+}
+
+const rotateSelected = (angle: number) => {
+  if (diagramStore.selectedShape) {
+    diagramStore.rotateElement('shape', diagramStore.selectedShape.id, angle)
+  }
+  if (diagramStore.selectedArrow) {
+    diagramStore.rotateElement('arrow', diagramStore.selectedArrow.id, angle)
+  }
+  if (diagramStore.selectedDrawingPath) {
+    diagramStore.rotateElement('drawingPath', diagramStore.selectedDrawingPath.id, angle)
+  }
+  // Rotate multi-selected elements
+  selection.selectedShapeIds.value.forEach(shapeId => {
+    diagramStore.rotateElement('shape', shapeId, angle)
+  })
+  selection.selectedArrowIds.value.forEach(arrowId => {
+    diagramStore.rotateElement('arrow', arrowId, angle)
+  })
+  selection.selectedDrawingPathIds.value.forEach(pathId => {
+    diagramStore.rotateElement('drawingPath', pathId, angle)
+  })
 }
 
 const finishTextEdit = () => {

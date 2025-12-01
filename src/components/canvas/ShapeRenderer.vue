@@ -1,5 +1,5 @@
 <template>
-  <g>
+  <g :transform="getShapeTransform(shape)">
     <rect
       v-if="shape.type === 'rectangle' && isSelected"
       :x="shape.x - Math.max(1, 2 / props.zoom)"
@@ -99,6 +99,28 @@
     >
       {{ shape.text }}
     </text>
+    
+    <!-- Rotation Handle -->
+    <g v-if="isSelected">
+      <line
+        :x1="shape.x + shape.width / 2"
+        :y1="shape.y - Math.max(15, 30 / props.zoom)"
+        :x2="shape.x + shape.width / 2"
+        :y2="shape.y - Math.max(5, 10 / props.zoom)"
+        stroke="#0078d4"
+        :stroke-width="Math.max(1, 2 / props.zoom)"
+      />
+      <circle
+        :cx="shape.x + shape.width / 2"
+        :cy="shape.y - Math.max(15, 30 / props.zoom)"
+        :r="Math.max(4, 8 / props.zoom)"
+        fill="white"
+        stroke="#0078d4"
+        :stroke-width="Math.max(1, 2 / props.zoom)"
+        class="rotation-handle"
+        @mousedown.stop="$emit('startRotate', shape, $event)"
+      />
+    </g>
   </g>
 </template>
 
@@ -117,6 +139,7 @@ const props = withDefaults(defineProps<Props>(), {
 defineEmits<{
   select: [shape: Shape, event: MouseEvent]
   editText: [shape: Shape]
+  startRotate: [shape: Shape, event: MouseEvent]
 }>()
 
 const getDiamondPath = (shape: Shape) => {
@@ -136,6 +159,13 @@ const getDiamondOutlinePath = (shape: Shape, zoom: number = 1) => {
   const hh = shape.height / 2 + offset
   
   return `M ${cx} ${cy - hh} L ${cx + hw} ${cy} L ${cx} ${cy + hh} L ${cx - hw} ${cy} Z`
+}
+
+const getShapeTransform = (shape: Shape) => {
+  if (!shape.rotation) return ''
+  const centerX = shape.x + shape.width / 2
+  const centerY = shape.y + shape.height / 2
+  return `rotate(${shape.rotation} ${centerX} ${centerY})`
 }
 </script>
 

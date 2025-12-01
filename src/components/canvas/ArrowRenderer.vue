@@ -1,5 +1,5 @@
 <template>
-  <g>
+  <g :transform="getArrowTransform(arrow)">
     <!-- Straight Arrow -->
     <line
       v-if="!arrow.isCurved"
@@ -72,6 +72,28 @@
         @mouseleave.stop="isHoveringHandle = false"
       />
     </g>
+    
+    <!-- Rotation Handle -->
+    <g v-if="isSelected">
+      <line
+        :x1="(arrow.startX + arrow.endX) / 2"
+        :y1="Math.min(arrow.startY, arrow.endY) - Math.max(15, 30 / props.zoom)"
+        :x2="(arrow.startX + arrow.endX) / 2"
+        :y2="Math.min(arrow.startY, arrow.endY) - Math.max(5, 10 / props.zoom)"
+        stroke="#0078d4"
+        :stroke-width="Math.max(1, 2 / props.zoom)"
+      />
+      <circle
+        :cx="(arrow.startX + arrow.endX) / 2"
+        :cy="Math.min(arrow.startY, arrow.endY) - Math.max(15, 30 / props.zoom)"
+        :r="Math.max(4, 8 / props.zoom)"
+        fill="white"
+        stroke="#0078d4"
+        :stroke-width="Math.max(1, 2 / props.zoom)"
+        class="rotation-handle"
+        @mousedown.stop="$emit('startRotate', arrow, $event)"
+      />
+    </g>
   </g>
 </template>
 
@@ -96,6 +118,7 @@ const emit = defineEmits<{
   select: [arrow: Arrow, event: MouseEvent]
   startMove: [arrow: Arrow, event: MouseEvent]
   startDrag: [arrow: Arrow, endpoint: 'start' | 'end', event: MouseEvent]
+  startRotate: [arrow: Arrow, event: MouseEvent]
 }>()
 
 const isHoveringHandle = ref(false)
@@ -164,6 +187,13 @@ const getArrowMarker = (color?: string) => {
   }
   
   return colorMap[color] || 'url(#arrowhead-black)'
+}
+
+const getArrowTransform = (arrow: Arrow) => {
+  if (!arrow.rotation) return ''
+  const centerX = (arrow.startX + arrow.endX) / 2
+  const centerY = (arrow.startY + arrow.endY) / 2
+  return `rotate(${arrow.rotation} ${centerX} ${centerY})`
 }
 </script>
 
