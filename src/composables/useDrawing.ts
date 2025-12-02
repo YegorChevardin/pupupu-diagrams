@@ -94,7 +94,6 @@ export function useDrawing() {
           arrowData.endShapeId = endShape.id
         }
         
-        console.log('Creating arrow with auto-connection:', arrowData)
         diagramStore.addArrow(arrowData)
       }
     } else {

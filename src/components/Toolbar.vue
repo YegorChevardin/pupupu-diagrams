@@ -70,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { ref, h } from 'vue'
 import { useDiagramStore, type Tool } from '../stores/diagram.js'
 
 const diagramStore = useDiagramStore()
@@ -243,8 +243,6 @@ const updateDrawingColor = (event: Event) => {
 const updateDrawingStrokeWidth = (width: number) => {
   diagramStore.setDrawingStrokeWidth(width)
 }
-
-
 </script>
 
 <style scoped>

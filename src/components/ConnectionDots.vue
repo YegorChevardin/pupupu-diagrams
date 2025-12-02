@@ -65,14 +65,9 @@ const onDotLeave = () => {
 
 const onDotClick = (point: { x: number, y: number, id: string }) => {
   const elementId = props.shape?.id || props.drawingPath?.id
-  console.log('Connection dot clicked:', point, 'Element:', elementId)
   if (diagramStore.connectionState.isConnecting) {
-    console.log('Completing connection to:', elementId)
-    // Complete the connection
     diagramStore.completeConnection(point, elementId!, point.id)
   } else {
-    console.log('Starting connection from:', elementId)
-    // Start a new connection
     diagramStore.startConnection(point, elementId!, point.id)
   }
 }

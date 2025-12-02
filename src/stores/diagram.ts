@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { debounce } from '../utils/debounce'
+import { rotatePoint, normalizeRotation } from '../utils/rotation'
 
 export type Tool = 'select' | 'rectangle' | 'circle' | 'text' | 'arrow' | 'pencil'
 
@@ -33,6 +35,8 @@ export interface Arrow {
   createdAt?: number
   startShapeId?: string
   endShapeId?: string
+  startDotId?: string
+  endDotId?: string
   isCurved?: boolean
   controlPoints?: Array<{ x: number, y: number, id: string }>
 }
@@ -86,40 +90,44 @@ export const useDiagramStore = defineStore('diagram', () => {
     shapes.value.push(shape)
     saveToLocalStorage()
   }
-  
-  const findShapeAt = (x: number, y: number, threshold: number = 20): Shape | null => {
-    return shapes.value.find(shape => {
-      if (shape.type === 'text') {
-        const textWidth = (shape.text?.length || 20) * (shape.fontSize ?? 14) * 0.6
-        const textHeight = shape.fontSize ?? 14
-        return x >= shape.x - threshold && 
-               x <= shape.x + textWidth + threshold && 
-               y >= shape.y - textHeight - threshold && 
-               y <= shape.y + threshold
-      } else {
-        return x >= shape.x - threshold && 
-               x <= shape.x + shape.width + threshold && 
-               y >= shape.y - threshold && 
-               y <= shape.y + shape.height + threshold
-      }
-    }) || null
-  }
 
   const getShapeConnectionPoints = (shape: Shape): Array<{ x: number, y: number, id: string }> => {
-    const points: Array<{ x: number, y: number, id: string }> = []
+    let points: Array<{ x: number, y: number, id: string }> = []
+    let centerX: number, centerY: number
     
-    if (shape.type === 'text') {
+    if (shape.type === 'circle') {
+      centerX = shape.x + shape.width / 2
+      centerY = shape.y + shape.height / 2
+      const radiusX = shape.width / 2
+      const radiusY = shape.height / 2
+      
+      const angles = [
+        { angle: -Math.PI / 2, id: 'top-center' },
+        { angle: -Math.PI / 4, id: 'top-right' },
+        { angle: 0, id: 'right-center' },
+        { angle: Math.PI / 4, id: 'bottom-right' },
+        { angle: Math.PI / 2, id: 'bottom-center' },
+        { angle: (3 * Math.PI) / 4, id: 'bottom-left' },
+        { angle: Math.PI, id: 'left-center' },
+        { angle: (-3 * Math.PI) / 4, id: 'top-left' }
+      ]
+      
+      points = angles.map(({ angle, id }) => ({
+        x: centerX + radiusX * Math.cos(angle),
+        y: centerY + radiusY * Math.sin(angle),
+        id
+      }))
+    } else if (shape.type === 'text') {
       const textWidth = (shape.text?.length || 20) * (shape.fontSize ?? 14) * 0.6
       const textHeight = shape.fontSize ?? 14
       const left = shape.x
       const right = shape.x + textWidth
       const top = shape.y - textHeight
       const bottom = shape.y
-      const centerX = shape.x + textWidth / 2
-      const centerY = shape.y - textHeight / 2
+      centerX = shape.x + textWidth / 2
+      centerY = shape.y - textHeight / 2
       
-      // 8 connection points: 4 corners + 4 sides
-      points.push(
+      points = [
         { x: left, y: top, id: 'top-left' },
         { x: centerX, y: top, id: 'top-center' },
         { x: right, y: top, id: 'top-right' },
@@ -128,17 +136,16 @@ export const useDiagramStore = defineStore('diagram', () => {
         { x: centerX, y: bottom, id: 'bottom-center' },
         { x: left, y: bottom, id: 'bottom-left' },
         { x: left, y: centerY, id: 'left-center' }
-      )
+      ]
     } else {
       const left = shape.x
       const right = shape.x + shape.width
       const top = shape.y
       const bottom = shape.y + shape.height
-      const centerX = shape.x + shape.width / 2
-      const centerY = shape.y + shape.height / 2
+      centerX = shape.x + shape.width / 2
+      centerY = shape.y + shape.height / 2
       
-      // 8 connection points: 4 corners + 4 sides
-      points.push(
+      points = [
         { x: left, y: top, id: 'top-left' },
         { x: centerX, y: top, id: 'top-center' },
         { x: right, y: top, id: 'top-right' },
@@ -147,29 +154,14 @@ export const useDiagramStore = defineStore('diagram', () => {
         { x: centerX, y: bottom, id: 'bottom-center' },
         { x: left, y: bottom, id: 'bottom-left' },
         { x: left, y: centerY, id: 'left-center' }
-      )
+      ]
     }
     
-    // Apply rotation transformation to connection points if shape is rotated
     if (shape.rotation && shape.rotation !== 0) {
-      const rotation = (shape.rotation * Math.PI) / 180 // Convert to radians
-      const shapeCenterX = shape.type === 'text' 
-        ? shape.x + ((shape.text?.length || 20) * (shape.fontSize ?? 14) * 0.6) / 2
-        : shape.x + shape.width / 2
-      const shapeCenterY = shape.type === 'text'
-        ? shape.y - (shape.fontSize ?? 14) / 2
-        : shape.y + shape.height / 2
-      
-      // Rotate each point around the shape's center
       for (const point of points) {
-        const dx = point.x - shapeCenterX
-        const dy = point.y - shapeCenterY
-        
-        const rotatedX = dx * Math.cos(rotation) - dy * Math.sin(rotation)
-        const rotatedY = dx * Math.sin(rotation) + dy * Math.cos(rotation)
-        
-        point.x = rotatedX + shapeCenterX
-        point.y = rotatedY + shapeCenterY
+        const rotated = rotatePoint(point.x, point.y, centerX, centerY, shape.rotation)
+        point.x = rotated.x
+        point.y = rotated.y
       }
     }
     
@@ -181,72 +173,76 @@ export const useDiagramStore = defineStore('diagram', () => {
       return []
     }
     
-    // Make a copy of the connection points
     const points = drawingPath.connectionPoints.map(point => ({ ...point }))
     
-    // Apply rotation transformation if drawing path is rotated
     if (drawingPath.rotation && drawingPath.rotation !== 0) {
-      const rotation = (drawingPath.rotation * Math.PI) / 180 // Convert to radians
       const pathCenterX = ((drawingPath.minX || 0) + (drawingPath.maxX || 0)) / 2
       const pathCenterY = ((drawingPath.minY || 0) + (drawingPath.maxY || 0)) / 2
       
-      // Rotate each point around the drawing path's center
       for (const point of points) {
-        const dx = point.x - pathCenterX
-        const dy = point.y - pathCenterY
-        
-        const rotatedX = dx * Math.cos(rotation) - dy * Math.sin(rotation)
-        const rotatedY = dx * Math.sin(rotation) + dy * Math.cos(rotation)
-        
-        point.x = rotatedX + pathCenterX
-        point.y = rotatedY + pathCenterY
+        const rotated = rotatePoint(point.x, point.y, pathCenterX, pathCenterY, drawingPath.rotation)
+        point.x = rotated.x
+        point.y = rotated.y
       }
     }
     
     return points
   }
 
+  const getConnectionPointById = (shape: Shape, dotId: string): { x: number, y: number, id: string } | null => {
+    const points = getShapeConnectionPoints(shape)
+    return points.find(p => p.id === dotId) || null
+  }
+
   const getClosestConnectionPoint = (shape: Shape, targetX: number, targetY: number): { x: number, y: number, id: string } => {
     const points = getShapeConnectionPoints(shape)
     if (points.length === 0) {
-      // Fallback to shape center if no points
       return { x: shape.x + (shape.width || 0) / 2, y: shape.y + (shape.height || 0) / 2, id: 'center' }
     }
     
-    let closestPoint = points[0]!
-    let minDistance = Math.sqrt(Math.pow(points[0]!.x - targetX, 2) + Math.pow(points[0]!.y - targetY, 2))
-    
-    for (const point of points) {
+    return points.reduce((closest, point) => {
       const distance = Math.sqrt(Math.pow(point.x - targetX, 2) + Math.pow(point.y - targetY, 2))
-      if (distance < minDistance) {
-        minDistance = distance
-        closestPoint = point
-      }
-    }
-    
-    return closestPoint
+      const closestDistance = Math.sqrt(Math.pow(closest.x - targetX, 2) + Math.pow(closest.y - targetY, 2))
+      return distance < closestDistance ? point : closest
+    }, points[0]!)
   }
 
   const addArrow = (arrowData: Omit<Arrow, 'id' | 'selected' | 'createdAt'>) => {
     let finalArrowData = { ...arrowData }
     
-    // Only auto-connect if the arrow data already has shape IDs (from dot-to-dot connections)
-    // Don't auto-connect arrows created with the arrow tool
     if (arrowData.startShapeId) {
       const startShape = shapes.value.find(s => s.id === arrowData.startShapeId)
       if (startShape) {
-        const connectionPoint = getClosestConnectionPoint(startShape, arrowData.startX, arrowData.startY)
-        finalArrowData.startX = connectionPoint.x
-        finalArrowData.startY = connectionPoint.y
+        if (arrowData.startDotId) {
+          const connectionPoint = getConnectionPointById(startShape, arrowData.startDotId)
+          if (connectionPoint) {
+            finalArrowData.startX = connectionPoint.x
+            finalArrowData.startY = connectionPoint.y
+          }
+        } else {
+          const connectionPoint = getClosestConnectionPoint(startShape, arrowData.startX, arrowData.startY)
+          finalArrowData.startX = connectionPoint.x
+          finalArrowData.startY = connectionPoint.y
+          finalArrowData.startDotId = connectionPoint.id
+        }
       }
     }
     
     if (arrowData.endShapeId) {
       const endShape = shapes.value.find(s => s.id === arrowData.endShapeId)
       if (endShape) {
-        const connectionPoint = getClosestConnectionPoint(endShape, arrowData.endX, arrowData.endY)
-        finalArrowData.endX = connectionPoint.x
-        finalArrowData.endY = connectionPoint.y
+        if (arrowData.endDotId) {
+          const connectionPoint = getConnectionPointById(endShape, arrowData.endDotId)
+          if (connectionPoint) {
+            finalArrowData.endX = connectionPoint.x
+            finalArrowData.endY = connectionPoint.y
+          }
+        } else {
+          const connectionPoint = getClosestConnectionPoint(endShape, arrowData.endX, arrowData.endY)
+          finalArrowData.endX = connectionPoint.x
+          finalArrowData.endY = connectionPoint.y
+          finalArrowData.endDotId = connectionPoint.id
+        }
       }
     }
 
@@ -288,28 +284,15 @@ export const useDiagramStore = defineStore('diagram', () => {
   }
 
   const addDrawingPath = (pathData: Omit<DrawingPath, 'id' | 'selected' | 'createdAt' | 'minX' | 'minY' | 'maxX' | 'maxY' | 'connectionPoints'>) => {
-    // Calculate bounding box
     const xs = pathData.points.map(p => p.x)
     const ys = pathData.points.map(p => p.y)
     const minX = Math.min(...xs)
     const minY = Math.min(...ys)
     const maxX = Math.max(...xs)
     const maxY = Math.max(...ys)
-    
-    // Generate connection points around the bounding box
     const centerX = (minX + maxX) / 2
     const centerY = (minY + maxY) / 2
-    const connectionPoints = [
-      { x: minX, y: minY, id: 'top-left' },
-      { x: centerX, y: minY, id: 'top-center' },
-      { x: maxX, y: minY, id: 'top-right' },
-      { x: maxX, y: centerY, id: 'middle-right' },
-      { x: maxX, y: maxY, id: 'bottom-right' },
-      { x: centerX, y: maxY, id: 'bottom-center' },
-      { x: minX, y: maxY, id: 'bottom-left' },
-      { x: minX, y: centerY, id: 'middle-left' }
-    ]
-
+    
     const drawingPath: DrawingPath = {
       ...pathData,
       id: generateId(),
@@ -321,7 +304,16 @@ export const useDiagramStore = defineStore('diagram', () => {
       minY,
       maxX,
       maxY,
-      connectionPoints
+      connectionPoints: [
+        { x: minX, y: minY, id: 'top-left' },
+        { x: centerX, y: minY, id: 'top-center' },
+        { x: maxX, y: minY, id: 'top-right' },
+        { x: maxX, y: centerY, id: 'middle-right' },
+        { x: maxX, y: maxY, id: 'bottom-right' },
+        { x: centerX, y: maxY, id: 'bottom-center' },
+        { x: minX, y: maxY, id: 'bottom-left' },
+        { x: minX, y: centerY, id: 'middle-left' }
+      ]
     }
     
     drawingPaths.value.push(drawingPath)
@@ -346,37 +338,34 @@ export const useDiagramStore = defineStore('diagram', () => {
 
   const moveDrawingPath = (pathId: string, deltaX: number, deltaY: number) => {
     const path = drawingPaths.value.find(p => p.id === pathId)
-    if (path) {
-      // Move all points
-      path.points.forEach(point => {
-        point.x += deltaX
-        point.y += deltaY
-      })
-      
-      // Update bounding box
-      const xs = path.points.map(p => p.x)
-      const ys = path.points.map(p => p.y)
-      path.minX = Math.min(...xs)
-      path.minY = Math.min(...ys)
-      path.maxX = Math.max(...xs)
-      path.maxY = Math.max(...ys)
-      
-      // Update connection points
-      const centerX = (path.minX + path.maxX) / 2
-      const centerY = (path.minY + path.maxY) / 2
-      path.connectionPoints = [
-        { x: path.minX, y: path.minY, id: 'top-left' },
-        { x: centerX, y: path.minY, id: 'top-center' },
-        { x: path.maxX, y: path.minY, id: 'top-right' },
-        { x: path.maxX, y: centerY, id: 'middle-right' },
-        { x: path.maxX, y: path.maxY, id: 'bottom-right' },
-        { x: centerX, y: path.maxY, id: 'bottom-center' },
-        { x: path.minX, y: path.maxY, id: 'bottom-left' },
-        { x: path.minX, y: centerY, id: 'middle-left' }
-      ]
-      
-      updateConnectedArrowsForDrawingPath(pathId)
-    }
+    if (!path) return
+    
+    path.points.forEach(point => {
+      point.x += deltaX
+      point.y += deltaY
+    })
+    
+    const xs = path.points.map(p => p.x)
+    const ys = path.points.map(p => p.y)
+    path.minX = Math.min(...xs)
+    path.minY = Math.min(...ys)
+    path.maxX = Math.max(...xs)
+    path.maxY = Math.max(...ys)
+    
+    const centerX = (path.minX + path.maxX) / 2
+    const centerY = (path.minY + path.maxY) / 2
+    path.connectionPoints = [
+      { x: path.minX, y: path.minY, id: 'top-left' },
+      { x: centerX, y: path.minY, id: 'top-center' },
+      { x: path.maxX, y: path.minY, id: 'top-right' },
+      { x: path.maxX, y: centerY, id: 'middle-right' },
+      { x: path.maxX, y: path.maxY, id: 'bottom-right' },
+      { x: centerX, y: path.maxY, id: 'bottom-center' },
+      { x: path.minX, y: path.maxY, id: 'bottom-left' },
+      { x: path.minX, y: centerY, id: 'middle-left' }
+    ]
+    
+    updateConnectedArrowsForDrawingPath(pathId)
   }
 
   const updateConnectedArrowsForDrawingPath = (pathId: string) => {
@@ -385,16 +374,33 @@ export const useDiagramStore = defineStore('diagram', () => {
     
     arrows.value.forEach(arrow => {
       if (arrow.startShapeId === pathId) {
-        const connectionPoint = getClosestConnectionPointForPath(path, arrow.endX, arrow.endY)
+        let connectionPoint
+        if (arrow.startDotId) {
+          connectionPoint = getConnectionPointByIdForPath(path, arrow.startDotId)
+        }
+        if (!connectionPoint) {
+          connectionPoint = getClosestConnectionPointForPath(path, arrow.endX, arrow.endY)
+        }
         arrow.startX = connectionPoint.x
         arrow.startY = connectionPoint.y
       }
       if (arrow.endShapeId === pathId) {
-        const connectionPoint = getClosestConnectionPointForPath(path, arrow.startX, arrow.startY)
+        let connectionPoint
+        if (arrow.endDotId) {
+          connectionPoint = getConnectionPointByIdForPath(path, arrow.endDotId)
+        }
+        if (!connectionPoint) {
+          connectionPoint = getClosestConnectionPointForPath(path, arrow.startX, arrow.startY)
+        }
         arrow.endX = connectionPoint.x
         arrow.endY = connectionPoint.y
       }
     })
+  }
+
+  const getConnectionPointByIdForPath = (path: DrawingPath, dotId: string): { x: number, y: number, id: string } | null => {
+    const points = getDrawingPathConnectionPoints(path)
+    return points.find(p => p.id === dotId) || null
   }
 
   const getClosestConnectionPointForPath = (path: DrawingPath, targetX: number, targetY: number): { x: number, y: number, id: string } => {
@@ -402,20 +408,11 @@ export const useDiagramStore = defineStore('diagram', () => {
       return { x: targetX, y: targetY, id: 'center' }
     }
     
-    let closestPoint = path.connectionPoints[0]!
-    let minDistance = Infinity
-    
-    path.connectionPoints.forEach(point => {
-      const distance = Math.sqrt(
-        Math.pow(point.x - targetX, 2) + Math.pow(point.y - targetY, 2)
-      )
-      if (distance < minDistance) {
-        minDistance = distance
-        closestPoint = point
-      }
-    })
-    
-    return closestPoint
+    return path.connectionPoints.reduce((closest, point) => {
+      const distance = Math.sqrt(Math.pow(point.x - targetX, 2) + Math.pow(point.y - targetY, 2))
+      const closestDistance = Math.sqrt(Math.pow(closest.x - targetX, 2) + Math.pow(closest.y - targetY, 2))
+      return distance < closestDistance ? point : closest
+    }, path.connectionPoints[0]!)
   }
   
   const updateConnectedArrows = (shapeId: string) => {
@@ -424,12 +421,24 @@ export const useDiagramStore = defineStore('diagram', () => {
     
     arrows.value.forEach(arrow => {
       if (arrow.startShapeId === shapeId) {
-        const connectionPoint = getClosestConnectionPoint(shape, arrow.endX, arrow.endY)
+        let connectionPoint
+        if (arrow.startDotId) {
+          connectionPoint = getConnectionPointById(shape, arrow.startDotId)
+        }
+        if (!connectionPoint) {
+          connectionPoint = getClosestConnectionPoint(shape, arrow.endX, arrow.endY)
+        }
         arrow.startX = connectionPoint.x
         arrow.startY = connectionPoint.y
       }
       if (arrow.endShapeId === shapeId) {
-        const connectionPoint = getClosestConnectionPoint(shape, arrow.startX, arrow.startY)
+        let connectionPoint
+        if (arrow.endDotId) {
+          connectionPoint = getConnectionPointById(shape, arrow.endDotId)
+        }
+        if (!connectionPoint) {
+          connectionPoint = getClosestConnectionPoint(shape, arrow.startX, arrow.startY)
+        }
         arrow.endX = connectionPoint.x
         arrow.endY = connectionPoint.y
       }
@@ -484,20 +493,19 @@ export const useDiagramStore = defineStore('diagram', () => {
   }
 
   const deleteSelected = () => {
-    let shouldSave = false
+    const hasSelections = selectedShape.value || selectedArrow.value || selectedDrawingPath.value
+    
     if (selectedShape.value) {
       deleteShape(selectedShape.value.id)
-      shouldSave = true
     }
     if (selectedArrow.value) {
       deleteArrow(selectedArrow.value.id)
-      shouldSave = true
     }
     if (selectedDrawingPath.value) {
       deleteDrawingPath(selectedDrawingPath.value.id)
-      shouldSave = true
     }
-    if (shouldSave) {
+    
+    if (hasSelections) {
       saveToLocalStorage()
     }
   }
@@ -538,14 +546,17 @@ export const useDiagramStore = defineStore('diagram', () => {
     }
   }
   
-  const saveToLocalStorage = () => {
+  const saveToLocalStorageImmediate = () => {
     const data = {
       shapes: shapes.value,
       arrows: arrows.value,
+      drawingPaths: drawingPaths.value,
       timestamp: Date.now()
     }
     localStorage.setItem('easy-uml-diagram', JSON.stringify(data))
   }
+  
+  const saveToLocalStorage = debounce(saveToLocalStorageImmediate, 300)
   
   const loadFromLocalStorage = () => {
     try {
@@ -554,8 +565,10 @@ export const useDiagramStore = defineStore('diagram', () => {
         const data = JSON.parse(saved)
         shapes.value = data.shapes || []
         arrows.value = data.arrows || []
+        drawingPaths.value = data.drawingPaths || []
         selectedShape.value = null
         selectedArrow.value = null
+        selectedDrawingPath.value = null
       }
     } catch (error) {
       console.warn('Failed to load diagram from localStorage:', error)
@@ -563,38 +576,33 @@ export const useDiagramStore = defineStore('diagram', () => {
   }
   
   const startConnection = (point: { x: number, y: number }, shapeId: string, dotId: string) => {
-    console.log('Starting connection from shape:', shapeId, 'dot:', dotId, 'point:', point)
     connectionState.value.isConnecting = true
     connectionState.value.startPoint = { x: point.x, y: point.y, shapeId, dotId }
   }
 
   const completeConnection = (endPoint: { x: number, y: number }, endShapeId: string, endDotId: string) => {
-    console.log('Completing connection to shape:', endShapeId, 'dot:', endDotId, 'point:', endPoint)
     if (!connectionState.value.startPoint) {
-      console.log('No start point found, cannot complete connection')
       return
     }
 
     const startPoint = connectionState.value.startPoint
     
-    // Don't create arrow if connecting to the same shape
     if (startPoint.shapeId === endShapeId) {
-      console.log('Cannot connect shape to itself')
       cancelConnection()
       return
     }
 
-    // Create arrow between the two connection points
     const arrowData = {
       startX: startPoint.x,
       startY: startPoint.y,
       endX: endPoint.x,
       endY: endPoint.y,
       startShapeId: startPoint.shapeId,
-      endShapeId: endShapeId
+      endShapeId: endShapeId,
+      startDotId: startPoint.dotId,
+      endDotId: endDotId
     }
 
-    console.log('Creating arrow with data:', arrowData)
     addArrow(arrowData)
     cancelConnection()
   }
@@ -708,19 +716,19 @@ export const useDiagramStore = defineStore('diagram', () => {
     if (elementType === 'shape') {
       const shape = shapes.value.find(s => s.id === id)
       if (shape) {
-        shape.rotation = ((shape.rotation || 0) + angle) % 360
+        shape.rotation = normalizeRotation((shape.rotation || 0) + angle)
         saveToLocalStorage()
       }
     } else if (elementType === 'arrow') {
       const arrow = arrows.value.find(a => a.id === id)
       if (arrow) {
-        arrow.rotation = ((arrow.rotation || 0) + angle) % 360
+        arrow.rotation = normalizeRotation((arrow.rotation || 0) + angle)
         saveToLocalStorage()
       }
     } else if (elementType === 'drawingPath') {
       const path = drawingPaths.value.find(p => p.id === id)
       if (path) {
-        path.rotation = ((path.rotation || 0) + angle) % 360
+        path.rotation = normalizeRotation((path.rotation || 0) + angle)
         saveToLocalStorage()
       }
     }
@@ -730,26 +738,26 @@ export const useDiagramStore = defineStore('diagram', () => {
     if (elementType === 'shape') {
       const shape = shapes.value.find(s => s.id === id)
       if (shape) {
-        shape.rotation = rotation % 360
+        shape.rotation = normalizeRotation(rotation)
         saveToLocalStorage()
       }
     } else if (elementType === 'arrow') {
       const arrow = arrows.value.find(a => a.id === id)
       if (arrow) {
-        arrow.rotation = rotation % 360
+        arrow.rotation = normalizeRotation(rotation)
         saveToLocalStorage()
       }
     } else if (elementType === 'drawingPath') {
       const path = drawingPaths.value.find(p => p.id === id)
       if (path) {
-        path.rotation = rotation % 360
+        path.rotation = normalizeRotation(rotation)
         saveToLocalStorage()
       }
     }
   }
 
   const generateId = () => {
-    return Math.random().toString(36).substr(2, 9)
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
   }
   
   // Load from localStorage on store initialization

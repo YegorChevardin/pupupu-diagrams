@@ -51,8 +51,8 @@
         :stroke-width="Math.max(2, 4 / props.zoom)"
         :class="['arrow-handle', { 'linked': arrow.startShapeId, 'draggable': !arrow.startShapeId }]"
         style="cursor: grab; pointer-events: all;"
-        @mousedown.stop.prevent="(e) => { console.log('🟢 Start handle mousedown'); handleDragStart('start', e); }"
-        @click.stop.prevent="() => console.log('🟢 Start handle clicked')"
+        @mousedown.stop.prevent="(e) => handleDragStart('start', e)"
+        @click.stop.prevent
         @mouseenter.stop="isHoveringHandle = true"
         @mouseleave.stop="isHoveringHandle = false"
       />
@@ -66,8 +66,8 @@
         :stroke-width="Math.max(2, 4 / props.zoom)"
         :class="['arrow-handle', { 'linked': arrow.endShapeId, 'draggable': !arrow.endShapeId }]"
         style="cursor: grab; pointer-events: all;"
-        @mousedown.stop.prevent="(e) => { console.log('🟢 End handle mousedown'); handleDragStart('end', e); }"
-        @click.stop.prevent="() => console.log('🟢 End handle clicked')"
+        @mousedown.stop.prevent="(e) => handleDragStart('end', e)"
+        @click.stop.prevent
         @mouseenter.stop="isHoveringHandle = true"
         @mouseleave.stop="isHoveringHandle = false"
       />
@@ -124,13 +124,11 @@ const emit = defineEmits<{
 const isHoveringHandle = ref(false)
 
 const handleDragStart = (endpoint: 'start' | 'end', event: MouseEvent) => {
-  console.log('🟢 Handle drag started:', endpoint, 'for arrow:', props.arrow.id, 'event:', event.type)
   event.preventDefault()
   event.stopPropagation()
   
-  isHoveringHandle.value = false // Clear hover state when dragging starts
+  isHoveringHandle.value = false
   emit('startDrag', props.arrow, endpoint, event)
-  console.log('🟢 Emitted startDrag event')
   return true
 }
 

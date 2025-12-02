@@ -38,7 +38,7 @@
       @dblclick="$emit('editText', shape)"
     />
     
-    <path
+    <rect
       v-if="shape.type === 'text' && isSelected"
       :x="shape.x - Math.max(2, 4 / props.zoom)"
       :y="shape.y - (shape.fontSize ?? 14) - Math.max(1, 2 / props.zoom)"
@@ -78,8 +78,6 @@
     >
       {{ shape.text }}
     </text>
-    
-
     
     <!-- Rotation Handle -->
     <g v-if="isSelected">

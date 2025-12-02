@@ -21,8 +21,6 @@
       <CanvasBackground />
       <ArrowMarkers :zoom="canvasInteraction.zoom.value" />
       
-
-      
       <g :transform="`translate(${canvasInteraction.panX.value}, ${canvasInteraction.panY.value}) scale(${canvasInteraction.zoom.value})`">
         <template v-for="element in allElementsSorted" :key="element.id">
           <ArrowRenderer
@@ -46,8 +44,6 @@
             @start-resize="handleDrawingPathStartResize"
             @start-rotate="handleDrawingPathStartRotate"
           />
-          
-
           
           <ShapeRenderer
             v-else
@@ -231,12 +227,14 @@ const handleDrawingPathStartMove = (drawingPath: DrawingPath, event: MouseEvent)
 const isResizingDrawingPath = ref(false)
 const resizingDrawingPath = ref<DrawingPath | null>(null)
 const resizeDrawingPathHandle = ref('')
+const originalDrawingPathRotation = ref(0)
 
 const handleDrawingPathStartResize = (drawingPath: DrawingPath, handle: string, event: MouseEvent) => {
   event.stopPropagation()
   event.preventDefault()
   
-  // Reset rotation during resize to avoid coordinate transformation issues
+  originalDrawingPathRotation.value = drawingPath.rotation || 0
+  
   if (drawingPath.rotation) {
     diagramStore.setElementRotation('drawingPath', drawingPath.id, 0)
   }
@@ -270,26 +268,23 @@ const handleArrowStartMove = (arrow: Arrow, event: MouseEvent) => {
 }
 
 const handleArrowStartDrag = (arrow: Arrow, endpoint: 'start' | 'end', event: MouseEvent) => {
-  console.log('🔵 Canvas received startDrag:', arrow.id, 'endpoint:', endpoint)
   event.stopPropagation()
   event.preventDefault()
   
   const storeArrow = diagramStore.arrows.find(a => a.id === arrow.id)
   if (!storeArrow) {
-    console.error('🔵 Arrow not found in store:', arrow.id)
     return
   }
   
   isDraggingArrow.value = true
   draggingArrow.value = { arrow: storeArrow, endpoint }
-  console.log('🔵 Set isDraggingArrow to true, using store arrow')
   
   if (endpoint === 'start' && storeArrow.startShapeId) {
-    console.log('🔵 Unlinking start endpoint from shape:', storeArrow.startShapeId)
     storeArrow.startShapeId = undefined
+    storeArrow.startDotId = undefined
   } else if (endpoint === 'end' && storeArrow.endShapeId) {
-    console.log('🔵 Unlinking end endpoint from shape:', storeArrow.endShapeId)
     storeArrow.endShapeId = undefined
+    storeArrow.endDotId = undefined
   }
   
   if (!selection.selectedArrowIds.value.includes(arrow.id)) {
@@ -339,9 +334,7 @@ const handleArrowStartRotate = (arrow: Arrow, event: MouseEvent) => {
   event.stopPropagation()
   event.preventDefault()
   
-  // Prevent rotation if arrow is connected to any shape or drawing path
   if (arrow.startShapeId || arrow.endShapeId) {
-    console.log('Cannot rotate connected arrow')
     return
   }
   
@@ -416,10 +409,10 @@ const handleMouseDown = (event: MouseEvent) => {
     const clickedArrow = geometry.getArrowAtPoint(worldPos.x, worldPos.y)
     const clickedDrawingPath = geometry.getDrawingPathAtPoint(worldPos.x, worldPos.y)
     
-
+    const isMultiSelect = event.ctrlKey || event.metaKey
     
     if (clickedDrawingPath) {
-      if (event.ctrlKey || event.metaKey) {
+      if (isMultiSelect) {
         if (selection.selectedDrawingPathIds.value.includes(clickedDrawingPath.id)) {
           selection.selectedDrawingPathIds.value = selection.selectedDrawingPathIds.value.filter(id => id !== clickedDrawingPath.id)
           clickedDrawingPath.selected = false
@@ -439,7 +432,7 @@ const handleMouseDown = (event: MouseEvent) => {
         drawingPathDragStart.value = worldPos
       }
     } else if (clickedShape) {
-      if (event.ctrlKey || event.metaKey) {
+      if (isMultiSelect) {
         if (selection.selectedShapeIds.value.includes(clickedShape.id)) {
           selection.selectedShapeIds.value = selection.selectedShapeIds.value.filter(id => id !== clickedShape.id)
           clickedShape.selected = false
@@ -469,7 +462,7 @@ const handleMouseDown = (event: MouseEvent) => {
     } else if (clickedArrow) {
       handleArrowSelect(clickedArrow, event)
     } else {
-      if (!event.ctrlKey && !event.metaKey) {
+      if (!isMultiSelect) {
         selection.clearAllSelections()
         hidePropertiesPanel()
       }
@@ -502,13 +495,10 @@ const handleMouseMove = (event: MouseEvent) => {
   }
   
   if (isDraggingArrow.value) {
-    console.log('🔵 Mouse move during arrow drag:', {
-      isDraggingArrow: isDraggingArrow.value,
-      draggingArrow: draggingArrow.value,
-      worldPos
-    })
     diagramStore.saveToLocalStorage()
-  }  drawing.updateDrawing(worldPos)
+  }
+  
+  drawing.updateDrawing(worldPos)
   
   if (canvasInteraction.isPanning.value && canvasInteraction.isWheelPressed.value) {
     const dx = screenX - canvasInteraction.lastPanPoint.value.x
@@ -520,7 +510,6 @@ const handleMouseMove = (event: MouseEvent) => {
     selection.updateSelectionBox(worldPos)
   } else if (isDraggingArrow.value && draggingArrow.value) {
     const { arrow, endpoint } = draggingArrow.value
-    console.log('🔵 Dragging arrow endpoint:', endpoint, 'to position:', worldPos, 'arrowId:', arrow.id)
     
     const storeArrow = diagramStore.arrows.find(a => a.id === arrow.id)
     if (storeArrow) {
@@ -547,18 +536,20 @@ const handleMouseMove = (event: MouseEvent) => {
         storeArrow.startX = connectionPoint.x
         storeArrow.startY = connectionPoint.y
         storeArrow.startShapeId = nearbyShape.id
-        console.log('🔵 Auto-connected start to shape:', nearbyShape.id)
+        storeArrow.startDotId = connectionPoint.id
       } else {
         storeArrow.endX = connectionPoint.x
         storeArrow.endY = connectionPoint.y
         storeArrow.endShapeId = nearbyShape.id
-        console.log('🔵 Auto-connected end to shape:', nearbyShape.id)
+        storeArrow.endDotId = connectionPoint.id
       }
     } else if (storeArrow) {
       if (endpoint === 'start') {
         storeArrow.startShapeId = undefined
+        storeArrow.startDotId = undefined
       } else {
         storeArrow.endShapeId = undefined
+        storeArrow.endDotId = undefined
       }
     }
   } else if (isMovingArrow.value && selection.selectedArrowIds.value.length > 0) {
@@ -735,6 +726,9 @@ const handleMouseUp = (event: MouseEvent) => {
     diagramStore.saveToLocalStorage()
   }
   if (isResizing.value) {
+    if (diagramStore.selectedShape && originalRotation.value !== 0) {
+      diagramStore.setElementRotation('shape', diagramStore.selectedShape.id, originalRotation.value)
+    }
     diagramStore.saveToLocalStorage()
   }
   isDragging.value = false
@@ -743,6 +737,9 @@ const handleMouseUp = (event: MouseEvent) => {
     diagramStore.saveToLocalStorage()
   }
   if (isDrawingPathDragging.value || isResizingDrawingPath.value) {
+    if (isResizingDrawingPath.value && resizingDrawingPath.value && originalDrawingPathRotation.value !== 0) {
+      diagramStore.setElementRotation('drawingPath', resizingDrawingPath.value.id, originalDrawingPathRotation.value)
+    }
     diagramStore.saveToLocalStorage()
   }
   isDraggingArrow.value = false
@@ -761,13 +758,17 @@ const handleMouseUp = (event: MouseEvent) => {
 
 
 
+const originalRotation = ref(0)
+
 const startResize = (event: MouseEvent, handleType: string) => {
   event.stopPropagation()
   if (!diagramStore.selectedShape) return
   
-  // Reset rotation during resize to avoid coordinate transformation issues
-  if (diagramStore.selectedShape.rotation) {
-    diagramStore.setElementRotation('shape', diagramStore.selectedShape.id, 0)
+  const shape = diagramStore.selectedShape
+  originalRotation.value = shape.rotation || 0
+  
+  if (shape.rotation) {
+    diagramStore.setElementRotation('shape', shape.id, 0)
   }
   
   const rect = svgCanvas.value!.getBoundingClientRect()
@@ -779,7 +780,6 @@ const startResize = (event: MouseEvent, handleType: string) => {
   resizeHandle.value = handleType
   resizeStartPoint.value = worldPos
   
-  const shape = diagramStore.selectedShape
   originalShapeSize.value = {
     x: shape.x,
     y: shape.y,
@@ -877,35 +877,19 @@ const isRotationDisabled = computed(() => {
 })
 
 const allElementsSorted = computed(() => {
-  const elements: Array<(Shape & { elementType: 'shape' }) | (Arrow & { elementType: 'arrow' }) | (DrawingPath & { elementType: 'drawingPath' })> = []
+  type ElementWithType = 
+    | (Shape & { elementType: 'shape' })
+    | (Arrow & { elementType: 'arrow' })
+    | (DrawingPath & { elementType: 'drawingPath' })
   
-  diagramStore.shapes.forEach(shape => {
-    elements.push({ ...shape, elementType: 'shape' as const })
-  })
+  const elements: ElementWithType[] = [
+    ...diagramStore.shapes.map(shape => ({ ...shape, elementType: 'shape' as const })),
+    ...diagramStore.arrows.map(arrow => ({ ...arrow, elementType: 'arrow' as const })),
+    ...diagramStore.drawingPaths.map(path => ({ ...path, elementType: 'drawingPath' as const }))
+  ]
   
-  diagramStore.arrows.forEach(arrow => {
-    elements.push({ ...arrow, elementType: 'arrow' as const })
-  })
-  
-  diagramStore.drawingPaths.forEach(drawingPath => {
-    elements.push({ ...drawingPath, elementType: 'drawingPath' as const })
-  })
-  
-  return elements.sort((a, b) => {
-    const aTime = a.createdAt || 0
-    const bTime = b.createdAt || 0
-    return aTime - bTime
-  })
+  return elements.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
 })
-
-const updateCurrentFontSize = (newSize: number) => {
-  currentFontSize.value = newSize
-  if (editingShapeId.value) {
-    diagramStore.updateShapeFontSize(editingShapeId.value, newSize)
-  }
-}
-
-
 
 const showPropertiesPanelFor = (element: Shape | Arrow | DrawingPath) => {
   // Position panel in top left corner under the toolbar
@@ -924,11 +908,11 @@ const hidePropertiesPanel = () => {
 }
 
 const updateSelectedFontSize = (newSize: number) => {
-  if (diagramStore.selectedShape) {
-    diagramStore.updateShapeFontSize(diagramStore.selectedShape.id, newSize)
-  }
+  const shapeIds = diagramStore.selectedShape 
+    ? [diagramStore.selectedShape.id, ...selection.selectedShapeIds.value]
+    : selection.selectedShapeIds.value
   
-  selection.selectedShapeIds.value.forEach(shapeId => {
+  shapeIds.forEach(shapeId => {
     const shape = diagramStore.shapes.find(s => s.id === shapeId)
     if (shape && (shape.type === 'text' || shape.text)) {
       diagramStore.updateShapeFontSize(shapeId, newSize)
@@ -937,69 +921,86 @@ const updateSelectedFontSize = (newSize: number) => {
 }
 
 const updateSelectedFill = (color: string) => {
-  if (diagramStore.selectedShape) {
-    ;(diagramStore.selectedShape as any).fill = color
-    diagramStore.saveToLocalStorage()
-  }
-  selection.selectedShapeIds.value.forEach(shapeId => {
+  const shapeIds = diagramStore.selectedShape 
+    ? [diagramStore.selectedShape.id, ...selection.selectedShapeIds.value]
+    : selection.selectedShapeIds.value
+  
+  shapeIds.forEach(shapeId => {
     const shape = diagramStore.shapes.find(s => s.id === shapeId)
     if (shape) {
-      ;(shape as any).fill = color
+      shape.fill = color
     }
   })
-  if (selection.selectedShapeIds.value.length > 0) {
+  
+  if (shapeIds.length > 0) {
     diagramStore.saveToLocalStorage()
   }
 }
 
 const updateSelectedStroke = (color: string) => {
+  let hasChanges = false
+  
   if (diagramStore.selectedArrow) {
-    ;(diagramStore.selectedArrow as any).stroke = color
-    diagramStore.saveToLocalStorage()
+    diagramStore.selectedArrow.stroke = color
+    hasChanges = true
   }
+  
   if (diagramStore.selectedDrawingPath) {
-    ;(diagramStore.selectedDrawingPath as any).stroke = color
-    diagramStore.saveToLocalStorage()
+    diagramStore.selectedDrawingPath.stroke = color
+    hasChanges = true
   }
+  
   selection.selectedArrowIds.value.forEach(arrowId => {
     const arrow = diagramStore.arrows.find(a => a.id === arrowId)
     if (arrow) {
-      ;(arrow as any).stroke = color
+      arrow.stroke = color
+      hasChanges = true
     }
   })
+  
   selection.selectedDrawingPathIds.value.forEach(pathId => {
     const path = diagramStore.drawingPaths.find(p => p.id === pathId)
     if (path) {
-      ;(path as any).stroke = color
+      path.stroke = color
+      hasChanges = true
     }
   })
-  if (selection.selectedArrowIds.value.length > 0 || selection.selectedDrawingPathIds.value.length > 0) {
+  
+  if (hasChanges) {
     diagramStore.saveToLocalStorage()
   }
 }
 
 const updateSelectedStrokeWidth = (width: number) => {
+  let hasChanges = false
+  
   if (diagramStore.selectedArrow) {
-    ;(diagramStore.selectedArrow as any).strokeWidth = width
-    diagramStore.saveToLocalStorage()
+    diagramStore.selectedArrow.strokeWidth = width
+    hasChanges = true
   }
+  
   if (diagramStore.selectedDrawingPath) {
-    ;(diagramStore.selectedDrawingPath as any).strokeWidth = width
-    diagramStore.saveToLocalStorage()
+    diagramStore.selectedDrawingPath.strokeWidth = width
+    hasChanges = true
   }
+  
   selection.selectedArrowIds.value.forEach(arrowId => {
     const arrow = diagramStore.arrows.find(a => a.id === arrowId)
     if (arrow) {
-      ;(arrow as any).strokeWidth = width
+      arrow.strokeWidth = width
+      hasChanges = true
     }
   })
+  
   selection.selectedDrawingPathIds.value.forEach(pathId => {
     const path = diagramStore.drawingPaths.find(p => p.id === pathId)
     if (path) {
-      ;(path as any).strokeWidth = width
+      path.strokeWidth = width
+      hasChanges = true
     }
   })
-  if (selection.selectedArrowIds.value.length > 0 || selection.selectedDrawingPathIds.value.length > 0) {
+  
+  if (hasChanges) {
     diagramStore.saveToLocalStorage()
   }
 }
@@ -1008,28 +1009,26 @@ const updateSelectedRotation = (rotation: number) => {
   if (diagramStore.selectedShape) {
     diagramStore.setElementRotation('shape', diagramStore.selectedShape.id, rotation)
   }
-  if (diagramStore.selectedArrow) {
-    // Prevent rotation of connected arrows
-    if (diagramStore.selectedArrow.startShapeId || diagramStore.selectedArrow.endShapeId) {
-      console.log('Cannot rotate connected arrow')
-      return
-    }
+  
+  if (diagramStore.selectedArrow && !diagramStore.selectedArrow.startShapeId && !diagramStore.selectedArrow.endShapeId) {
     diagramStore.setElementRotation('arrow', diagramStore.selectedArrow.id, rotation)
   }
+  
   if (diagramStore.selectedDrawingPath) {
     diagramStore.setElementRotation('drawingPath', diagramStore.selectedDrawingPath.id, rotation)
   }
-  // Update multi-selected elements
+  
   selection.selectedShapeIds.value.forEach(shapeId => {
     diagramStore.setElementRotation('shape', shapeId, rotation)
   })
+  
   selection.selectedArrowIds.value.forEach(arrowId => {
     const arrow = diagramStore.arrows.find(a => a.id === arrowId)
-    // Skip connected arrows
     if (arrow && !arrow.startShapeId && !arrow.endShapeId) {
       diagramStore.setElementRotation('arrow', arrowId, rotation)
     }
   })
+  
   selection.selectedDrawingPathIds.value.forEach(pathId => {
     diagramStore.setElementRotation('drawingPath', pathId, rotation)
   })
@@ -1099,8 +1098,6 @@ onMounted(() => {
       diagramStore.shapes.forEach(s => s.selected = true)
       diagramStore.arrows.forEach(a => a.selected = true)
       diagramStore.drawingPaths.forEach(d => d.selected = true)
-      diagramStore.shapes.forEach(s => s.selected = true)
-      diagramStore.arrows.forEach(a => a.selected = true)
     }
   }
   

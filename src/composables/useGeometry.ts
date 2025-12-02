@@ -1,4 +1,5 @@
 import { useDiagramStore, type Shape, type Arrow, type DrawingPath } from '../stores/diagram'
+import { isPointInRect, isPointInCircle } from '../utils/geometry'
 
 export function useGeometry() {
   const diagramStore = useDiagramStore()
@@ -9,8 +10,7 @@ export function useGeometry() {
       if (!shape) continue
       
       if (shape.type === 'rectangle') {
-        if (x >= shape.x && x <= shape.x + shape.width &&
-            y >= shape.y && y <= shape.y + shape.height) {
+        if (isPointInRect(x, y, shape.x, shape.y, shape.width, shape.height)) {
           return shape
         }
       } else if (shape.type === 'circle') {
@@ -18,9 +18,7 @@ export function useGeometry() {
         const centerY = shape.y + shape.height / 2
         const radiusX = shape.width / 2
         const radiusY = shape.height / 2
-        const dx = (x - centerX) / radiusX
-        const dy = (y - centerY) / radiusY
-        if (dx * dx + dy * dy <= 1) {
+        if (isPointInCircle(x, y, centerX, centerY, radiusX, radiusY)) {
           return shape
         }
       } else if (shape.type === 'text') {

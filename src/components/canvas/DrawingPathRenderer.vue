@@ -28,21 +28,50 @@
       pointer-events="none"
     />
     
-    <!-- Resize handles for selected path -->
+    <!-- Resize handle for selected path -->
     <g v-if="isSelected">
-      <!-- Corner handles -->
-      <circle
-        v-for="handle in getRotatedResizeHandles()"
-        :key="handle.id"
-        :cx="handle.x"
-        :cy="handle.y"
-        :r="Math.max(4, 6 / zoom)"
+      <!-- Larger clickable area -->
+      <rect
+        :x="drawingPath.maxX! - Math.max(6, 10 / zoom)"
+        :y="drawingPath.maxY! - Math.max(6, 10 / zoom)"
+        :width="Math.max(12, 20 / zoom)"
+        :height="Math.max(12, 20 / zoom)"
+        fill="transparent"
+        class="resize-handle-area"
+        style="cursor: nwse-resize;"
+        @mousedown.stop="$emit('startResize', drawingPath, 'bottom-right', $event)"
+      />
+      <!-- Visible handle -->
+      <rect
+        :x="drawingPath.maxX! - Math.max(4, 6 / zoom)"
+        :y="drawingPath.maxY! - Math.max(4, 6 / zoom)"
+        :width="Math.max(8, 12 / zoom)"
+        :height="Math.max(8, 12 / zoom)"
         fill="#0078d4"
         stroke="white"
-        stroke-width="2"
-        class="resize-handle"
-        :style="`cursor: ${handle.cursor};`"
-        @mousedown.stop="$emit('startResize', drawingPath, handle.id, $event)"
+        :stroke-width="Math.max(1, 2 / zoom)"
+        class="resize-handle-visual"
+        style="pointer-events: none;"
+        rx="1"
+      />
+      <!-- Corner indicator lines -->
+      <line
+        :x1="drawingPath.maxX!"
+        :y1="drawingPath.maxY! - Math.max(8, 12 / zoom)"
+        :x2="drawingPath.maxX!"
+        :y2="drawingPath.maxY!"
+        stroke="#0078d4"
+        :stroke-width="Math.max(1, 2 / zoom)"
+        style="pointer-events: none;"
+      />
+      <line
+        :x1="drawingPath.maxX! - Math.max(8, 12 / zoom)"
+        :y1="drawingPath.maxY!"
+        :x2="drawingPath.maxX!"
+        :y2="drawingPath.maxY!"
+        stroke="#0078d4"
+        :stroke-width="Math.max(1, 2 / zoom)"
+        style="pointer-events: none;"
       />
       
       <!-- Rotation Handle -->
@@ -130,35 +159,6 @@ const getDrawingPathTransform = (drawingPath: DrawingPath) => {
   return `rotate(${drawingPath.rotation} ${centerX} ${centerY})`
 }
 
-const getRotatedResizeHandles = () => {
-  const handles = [
-    { id: 'top-left', x: props.drawingPath.minX!, y: props.drawingPath.minY!, cursor: 'nw-resize' },
-    { id: 'top-right', x: props.drawingPath.maxX!, y: props.drawingPath.minY!, cursor: 'ne-resize' },
-    { id: 'bottom-right', x: props.drawingPath.maxX!, y: props.drawingPath.maxY!, cursor: 'se-resize' },
-    { id: 'bottom-left', x: props.drawingPath.minX!, y: props.drawingPath.maxY!, cursor: 'sw-resize' }
-  ]
-
-  // Apply rotation transformation if drawing path is rotated
-  if (props.drawingPath.rotation && props.drawingPath.rotation !== 0) {
-    const rotation = (props.drawingPath.rotation * Math.PI) / 180 // Convert to radians
-    const centerX = ((props.drawingPath.minX || 0) + (props.drawingPath.maxX || 0)) / 2
-    const centerY = ((props.drawingPath.minY || 0) + (props.drawingPath.maxY || 0)) / 2
-    
-    // Rotate each handle around the drawing path's center
-    for (const handle of handles) {
-      const dx = handle.x - centerX
-      const dy = handle.y - centerY
-      
-      const rotatedX = dx * Math.cos(rotation) - dy * Math.sin(rotation)
-      const rotatedY = dx * Math.sin(rotation) + dy * Math.cos(rotation)
-      
-      handle.x = rotatedX + centerX
-      handle.y = rotatedY + centerY
-    }
-  }
-  
-  return handles
-}
 </script>
 
 <style scoped>
@@ -171,7 +171,17 @@ const getRotatedResizeHandles = () => {
   opacity: 0.8;
 }
 
-.resize-handle {
-  cursor: pointer;
+.resize-handle-area {
+  cursor: nwse-resize;
+}
+
+.resize-handle-visual {
+  pointer-events: none;
+  transition: all 0.15s ease;
+}
+
+.resize-handle-area:hover ~ .resize-handle-visual {
+  fill: #60a5fa;
+  transform: scale(1.1);
 }
 </style>

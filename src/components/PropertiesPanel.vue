@@ -228,7 +228,6 @@ const decreaseFontSize = () => {
 }
 
 
-
 .panel-header {
   display: flex;
   justify-content: space-between;
@@ -380,8 +379,6 @@ const decreaseFontSize = () => {
   gap: 4px;
   align-items: center;
 }
-
-
 
 .rotation-input {
   width: 50px;

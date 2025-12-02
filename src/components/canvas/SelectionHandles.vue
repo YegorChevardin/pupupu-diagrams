@@ -1,22 +1,48 @@
 <template>
   <g v-if="selectedShape">
-    <g v-for="handle in getSelectionHandles(selectedShape)" :key="handle.type">
-      <circle
-        :cx="handle.x"
-        :cy="handle.y"
-        :r="Math.max(8, 12 / props.zoom)"
+    <!-- Main resize handle in bottom-right corner -->
+    <g :transform="getHandleTransform()">
+      <!-- Larger clickable area -->
+      <rect
+        :x="selectedShape.x + selectedShape.width - Math.max(6, 10 / props.zoom)"
+        :y="selectedShape.y + selectedShape.height - Math.max(6, 10 / props.zoom)"
+        :width="Math.max(12, 20 / props.zoom)"
+        :height="Math.max(12, 20 / props.zoom)"
         fill="transparent"
-        :class="['selection-handle-area', `handle-${handle.type}`]"
-        @mousedown.stop="$emit('startResize', $event, handle.type)"
+        class="resize-handle-area"
+        style="cursor: nwse-resize;"
+        @mousedown.stop="$emit('startResize', $event, 'se')"
       />
-      <circle
-        :cx="handle.x"
-        :cy="handle.y"
-        :r="Math.max(3, 4 / props.zoom)"
+      <!-- Visible handle -->
+      <rect
+        :x="selectedShape.x + selectedShape.width - Math.max(4, 6 / props.zoom)"
+        :y="selectedShape.y + selectedShape.height - Math.max(4, 6 / props.zoom)"
+        :width="Math.max(8, 12 / props.zoom)"
+        :height="Math.max(8, 12 / props.zoom)"
         fill="#2196f3"
         stroke="#ffffff"
-        :stroke-width="Math.max(0.5, 1 / props.zoom)"
-        :class="['selection-handle-visual', `handle-${handle.type}`]"
+        :stroke-width="Math.max(1, 2 / props.zoom)"
+        class="resize-handle-visual"
+        style="pointer-events: none;"
+        rx="1"
+      />
+      <!-- Corner indicator lines -->
+      <line
+        :x1="selectedShape.x + selectedShape.width"
+        :y1="selectedShape.y + selectedShape.height - Math.max(8, 12 / props.zoom)"
+        :x2="selectedShape.x + selectedShape.width"
+        :y2="selectedShape.y + selectedShape.height"
+        stroke="#2196f3"
+        :stroke-width="Math.max(1, 2 / props.zoom)"
+        style="pointer-events: none;"
+      />
+      <line
+        :x1="selectedShape.x + selectedShape.width - Math.max(8, 12 / props.zoom)"
+        :y1="selectedShape.y + selectedShape.height"
+        :x2="selectedShape.x + selectedShape.width"
+        :y2="selectedShape.y + selectedShape.height"
+        stroke="#2196f3"
+        :stroke-width="Math.max(1, 2 / props.zoom)"
         style="pointer-events: none;"
       />
     </g>
@@ -39,65 +65,26 @@ defineEmits<{
   startResize: [event: MouseEvent, handleType: string]
 }>()
 
-const getSelectionHandles = (shape: Shape | null) => {
-  if (!shape) return []
-  
-  const handles = [
-    { type: 'nw', x: shape.x, y: shape.y },
-    { type: 'ne', x: shape.x + shape.width, y: shape.y },
-    { type: 'sw', x: shape.x, y: shape.y + shape.height },
-    { type: 'se', x: shape.x + shape.width, y: shape.y + shape.height }
-  ]
-  
-  // Apply rotation transformation if shape is rotated
-  if (shape.rotation && shape.rotation !== 0) {
-    const rotation = (shape.rotation * Math.PI) / 180 // Convert to radians
-    const centerX = shape.x + shape.width / 2
-    const centerY = shape.y + shape.height / 2
-    
-    // Rotate each handle around the shape's center
-    for (const handle of handles) {
-      const dx = handle.x - centerX
-      const dy = handle.y - centerY
-      
-      const rotatedX = dx * Math.cos(rotation) - dy * Math.sin(rotation)
-      const rotatedY = dx * Math.sin(rotation) + dy * Math.cos(rotation)
-      
-      handle.x = rotatedX + centerX
-      handle.y = rotatedY + centerY
-    }
-  }
-  
-  return handles
+const getHandleTransform = () => {
+  if (!props.selectedShape || !props.selectedShape.rotation) return ''
+  const centerX = props.selectedShape.x + props.selectedShape.width / 2
+  const centerY = props.selectedShape.y + props.selectedShape.height / 2
+  return `rotate(${props.selectedShape.rotation} ${centerX} ${centerY})`
 }
 </script>
 
 <style scoped>
-.selection-handle-area {
-  cursor: pointer;
+.resize-handle-area {
+  cursor: nwse-resize;
 }
 
-.selection-handle-visual {
+.resize-handle-visual {
   pointer-events: none;
+  transition: all 0.15s ease;
 }
 
-.handle-nw {
-  cursor: nw-resize;
-}
-
-.handle-ne {
-  cursor: ne-resize;
-}
-
-.handle-sw {
-  cursor: sw-resize;
-}
-
-.handle-se {
-  cursor: se-resize;
-}
-
-.selection-handle-area:hover + .selection-handle-visual {
+.resize-handle-area:hover ~ .resize-handle-visual {
   fill: #1976d2;
+  transform: scale(1.1);
 }
 </style>
