@@ -1113,8 +1113,13 @@ onMounted(() => {
 .canvas-container {
   width: 100%;
   height: 100%;
-  background: #f0f0f0;
+  background: #f5f5f5;
   overflow: hidden;
+  transition: background 0.3s ease;
+}
+
+:global(.dark) .canvas-container {
+  background: #1e293b;
 }
 
 .diagram-canvas {
@@ -1140,15 +1145,20 @@ onMounted(() => {
 }
 
 .arrow-handle:hover {
-  fill: #1976d2;
+  fill: #667eea;
+}
+
+:global(.dark) .arrow-handle:hover {
+  fill: #818cf8;
 }
 
 .text-input-overlay {
   position: absolute;
-  background: white;
-  border: 2px solid #2196f3;
-  border-radius: 4px;
-  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  border: 2px solid #667eea;
+  border-radius: 6px;
+  padding: 6px 10px;
   font-size: 14px;
   font-family: inherit;
   outline: none;
@@ -1156,12 +1166,24 @@ onMounted(() => {
   min-width: 100px;
   text-align: center;
   transform-origin: top left;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+}
+
+:global(.dark) .text-input-overlay {
+  background: rgba(30, 41, 59, 0.98);
+  border-color: #818cf8;
+  color: #e2e8f0;
+  box-shadow: 0 4px 16px rgba(129, 140, 248, 0.3);
 }
 
 .text-input-overlay:focus {
-  border-color: #1976d2;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+  border-color: #764ba2;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3), 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-
+:global(.dark) .text-input-overlay:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4), 0 0 0 3px rgba(129, 140, 248, 0.2);
+}
 </style>

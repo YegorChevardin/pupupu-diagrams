@@ -106,33 +106,58 @@ const increaseSize = () => {
 .text-editor-input {
   width: 100%;
   height: 100%;
-  border: 2px solid #007bff;
-  border-radius: 4px;
-  padding: 4px 8px;
+  border: 2px solid #667eea;
+  border-radius: 6px;
+  padding: 6px 10px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   outline: none;
-  background: white;
+  background: rgba(255, 255, 255, 0.98);
   text-align: center;
   box-sizing: border-box;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+:global(.dark) .text-editor-input {
+  background: rgba(30, 41, 59, 0.98);
+  border-color: #818cf8;
+  color: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(129, 140, 248, 0.3);
 }
 
 .text-editor-input:focus {
-  border-color: #0056b3;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  border-color: #764ba2;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3), 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+:global(.dark) .text-editor-input:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4), 0 0 0 3px rgba(129, 140, 248, 0.2);
 }
 
 .font-btn {
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .font-btn:hover {
-  fill: #e9ecef;
-  stroke: #adb5bd;
+  fill: rgba(102, 126, 234, 0.1);
+  stroke: #667eea;
+}
+
+:global(.dark) .font-btn:hover {
+  fill: rgba(139, 92, 246, 0.2);
+  stroke: #818cf8;
 }
 
 .font-btn:active {
-  fill: #dee2e6;
-  stroke: #6c757d;
+  fill: rgba(102, 126, 234, 0.2);
+  stroke: #764ba2;
+  transform: scale(0.95);
+}
+
+:global(.dark) .font-btn:active {
+  fill: rgba(139, 92, 246, 0.3);
+  stroke: #a78bfa;
 }
 </style>

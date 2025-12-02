@@ -7,8 +7,8 @@
       :cx="point.x"
       :cy="point.y"
       :r="controlPointSize"
-      fill="#3b82f6"
-      stroke="#1e40af"
+      :fill="isDark ? '#818cf8' : '#667eea'"
+      :stroke="isDark ? '#6366f1' : '#764ba2'"
       :stroke-width="2"
       class="control-point"
       @mousedown="startDrag($event, point, index)"
@@ -62,8 +62,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useDiagramStore, type Arrow } from '../stores/diagram'
+import { useTheme } from '../composables/useTheme'
 
 interface Props {
   arrow: Arrow
@@ -76,6 +77,12 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const diagramStore = useDiagramStore()
+const { theme } = useTheme()
+const isDark = ref(theme.value === 'dark')
+
+watch(theme, (newTheme) => {
+  isDark.value = newTheme === 'dark'
+})
 
 const controlPointSize = computed(() => 6 / props.zoom)
 
@@ -126,11 +133,12 @@ const removePoint = (pointId: string) => {
 }
 
 .control-point:hover {
-  fill: #60a5fa;
-  r: 8;
+  filter: brightness(1.2);
+  transform: scale(1.3);
 }
 
 .control-line {
   pointer-events: none;
+  opacity: 0.6;
 }
 </style>

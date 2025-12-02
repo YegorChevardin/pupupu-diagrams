@@ -218,52 +218,81 @@ const decreaseFontSize = () => {
 <style scoped>
 .properties-panel {
   position: absolute;
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
   min-width: 200px;
   z-index: 1000;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: all 0.3s ease;
 }
 
+:global(.dark) .properties-panel {
+  background: rgba(30, 41, 59, 0.98);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
 
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  border-bottom: 1px solid #e0e0e0;
-  background: #f8f9fa;
-  border-radius: 8px 8px 0 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(248, 249, 250, 0.6);
+  border-radius: 12px 12px 0 0;
+  transition: all 0.3s ease;
+}
+
+:global(.dark) .panel-header {
+  background: rgba(15, 23, 42, 0.6);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .panel-title {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: #333;
+  transition: color 0.3s ease;
+}
+
+:global(.dark) .panel-title {
+  color: #e2e8f0;
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 16px;
+  font-size: 18px;
   cursor: pointer;
   color: #666;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+:global(.dark) .close-btn {
+  color: #94a3b8;
 }
 
 .close-btn:hover {
-  background: #e0e0e0;
+  background: rgba(0, 0, 0, 0.06);
+  color: #333;
+}
+
+:global(.dark) .close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
 }
 
 .panel-content {
-  padding: 12px;
+  padding: 14px;
 }
 
 .property-group {
@@ -277,11 +306,16 @@ const decreaseFontSize = () => {
 .property-label {
   display: block;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   color: #666;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  transition: color 0.3s ease;
+}
+
+:global(.dark) .property-label {
+  color: #94a3b8;
 }
 
 .font-size-controls {
@@ -291,29 +325,50 @@ const decreaseFontSize = () => {
 }
 
 .size-btn {
-  width: 24px;
-  height: 24px;
-  border: 1px solid #ddd;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   background: white;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 14px;
   font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+:global(.dark) .size-btn {
+  background: #334155;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
 }
 
 .size-btn:hover {
-  background: #f5f5f5;
-  border-color: #bbb;
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+  color: #3b82f6;
+  transform: scale(1.05);
+}
+
+:global(.dark) .size-btn:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: #8b5cf6;
+  color: #a78bfa;
 }
 
 .font-size-display {
   font-size: 12px;
+  font-weight: 600;
   color: #333;
-  min-width: 35px;
+  min-width: 40px;
   text-align: center;
+  transition: color 0.3s ease;
+}
+
+:global(.dark) .font-size-display {
+  color: #cbd5e1;
 }
 
 .color-options {
@@ -323,30 +378,48 @@ const decreaseFontSize = () => {
 }
 
 .color-picker {
-  width: 40px;
-  height: 30px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  width: 42px;
+  height: 32px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
   cursor: pointer;
   background: none;
+  transition: all 0.2s ease;
+}
+
+:global(.dark) .color-picker {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.color-picker:hover {
+  border-color: #3b82f6;
+  transform: scale(1.05);
 }
 
 .color-option {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   cursor: pointer;
   border: 2px solid transparent;
   transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .color-option:hover {
-  transform: scale(1.1);
+  transform: scale(1.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .color-option.active {
-  border-color: #0078d4;
-  box-shadow: 0 0 0 1px #0078d4;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+  transform: scale(1.1);
+}
+
+:global(.dark) .color-option.active {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.4);
 }
 
 .line-options {
@@ -355,23 +428,45 @@ const decreaseFontSize = () => {
 }
 
 .line-option {
-  padding: 6px 12px;
-  border: 1px solid #ddd;
+  padding: 7px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   background: white;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+:global(.dark) .line-option {
+  background: #334155;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
 }
 
 .line-option:hover {
-  background: #f5f5f5;
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+  color: #3b82f6;
+  transform: translateY(-1px);
+}
+
+:global(.dark) .line-option:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: #8b5cf6;
+  color: #a78bfa;
 }
 
 .line-option.active {
-  background: #0078d4;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  border-color: #0078d4;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+:global(.dark) .line-option.active {
+  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.5);
 }
 
 .rotation-controls {
@@ -381,12 +476,32 @@ const decreaseFontSize = () => {
 }
 
 .rotation-input {
-  width: 50px;
-  padding: 4px 6px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 11px;
+  width: 60px;
+  padding: 6px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  font-size: 12px;
   text-align: center;
+  font-weight: 600;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+:global(.dark) .rotation-input {
+  background: #334155;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+
+.rotation-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+:global(.dark) .rotation-input:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
 }
 
 .rotation-input:disabled,
@@ -394,6 +509,12 @@ const decreaseFontSize = () => {
   background-color: #f5f5f5;
   color: #999;
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.5;
+}
+
+:global(.dark) .rotation-input:disabled,
+:global(.dark) .rotation-input.disabled {
+  background-color: #1e293b;
+  color: #64748b;
 }
 </style>

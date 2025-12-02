@@ -120,21 +120,35 @@ watch(localText, () => {
 }
 
 .text-input {
-  border: 2px solid #0078d4;
-  border-radius: 4px;
-  padding: 4px 8px;
+  border: 2px solid #667eea;
+  border-radius: 6px;
+  padding: 6px 10px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   outline: none;
-  background: white;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
   resize: none;
   overflow: hidden;
   line-height: 1.2;
   min-height: 1.2em;
-  box-shadow: 0 2px 8px rgba(0, 120, 212, 0.2);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3), 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+:global(.dark) .text-input {
+  background: rgba(30, 41, 59, 0.98);
+  border-color: #818cf8;
+  color: #e2e8f0;
+  box-shadow: 0 4px 16px rgba(129, 140, 248, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .text-input:focus {
-  border-color: #005a9e;
-  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
+  border-color: #764ba2;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4), 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+:global(.dark) .text-input:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5), 0 0 0 3px rgba(129, 140, 248, 0.2);
 }
 </style>

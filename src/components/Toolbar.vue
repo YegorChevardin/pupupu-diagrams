@@ -1,5 +1,13 @@
 <template>
   <div class="toolbar">
+    <button 
+      @click="toggleTheme" 
+      class="theme-toggle"
+      :title="theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'"
+    >
+      <component :is="theme === 'light' ? MoonIcon : SunIcon" />
+    </button>
+    
     <div class="tool-group primary">
       <button
         v-for="toolOption in tools"
@@ -72,8 +80,10 @@
 <script setup lang="ts">
 import { ref, h } from 'vue'
 import { useDiagramStore, type Tool } from '../stores/diagram.js'
+import { useTheme } from '../composables/useTheme'
 
 const diagramStore = useDiagramStore()
+const { theme, toggleTheme } = useTheme()
 
 const fileInput = ref<HTMLInputElement>()
 
@@ -122,6 +132,22 @@ const UploadIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24',
 
 const PencilIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none' }, [
   h('path', { d: 'M17 3C17.2626 2.73735 17.5744 2.52901 17.9176 2.38687C18.2608 2.24473 18.6286 2.17157 19 2.17157C19.3714 2.17157 19.7392 2.24473 20.0824 2.38687C20.4256 2.52901 20.7374 2.73735 21 3C21.2626 3.26264 21.471 3.57444 21.6131 3.9176C21.7553 4.26077 21.8284 4.62856 21.8284 5C21.8284 5.37143 21.7553 5.73923 21.6131 6.08239C21.471 6.42555 21.2626 6.73735 21 7L7.5 20.5L2 22L3.5 16.5L17 3Z', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linejoin': 'round' })
+])
+
+const MoonIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none' }, [
+  h('path', { d: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })
+])
+
+const SunIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none' }, [
+  h('circle', { cx: 12, cy: 12, r: 5, stroke: 'currentColor', 'stroke-width': 2 }),
+  h('path', { d: 'M12 1V3', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }),
+  h('path', { d: 'M12 21V23', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }),
+  h('path', { d: 'M4.22 4.22L5.64 5.64', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }),
+  h('path', { d: 'M18.36 18.36L19.78 19.78', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }),
+  h('path', { d: 'M1 12H3', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }),
+  h('path', { d: 'M21 12H23', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }),
+  h('path', { d: 'M4.22 19.78L5.64 18.36', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }),
+  h('path', { d: 'M18.36 5.64L19.78 4.22', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' })
 ])
 
 const tools = [
@@ -249,7 +275,7 @@ const updateDrawingStrokeWidth = (width: number) => {
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -259,45 +285,115 @@ const updateDrawingStrokeWidth = (width: number) => {
   }
 }
 
+.theme-toggle {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  padding: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #64748b;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+:global(.dark) .theme-toggle {
+  background: rgba(30, 41, 59, 0.65);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+  color: #3b82f6;
+  transform: scale(1.05) rotate(15deg);
+}
+
+:global(.dark) .theme-toggle:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: #8b5cf6;
+  color: #a78bfa;
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .theme-toggle {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+  }
+}
+
 .tool-group {
   display: flex;
-  gap: 4px;
-  background: #f7f9fc;
-  border: 1px solid #e1e5e9;
-  border-radius: 8px;
-  padding: 4px;
-  flex-wrap: wrap;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  padding: 3px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+}
+
+:global(.dark) .tool-group {
+  background: rgba(30, 41, 59, 0.65);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 @media (max-width: 768px) {
   .tool-group {
     padding: 2px;
-    gap: 2px;
   }
 }
 
 .tool-group.primary {
-  background: #f7f9fc;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+:global(.dark) .tool-group.primary {
+  background: rgba(30, 41, 59, 0.7);
 }
 
 .tool-group.secondary {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+:global(.dark) .tool-group.secondary {
+  background: rgba(30, 41, 59, 0.65);
 }
 
 .divider {
   width: 1px;
-  height: 24px;
-  background: #e1e5e9;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.06);
+  margin: 0 2px;
+  transition: background 0.3s ease;
+}
+
+:global(.dark) .divider {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .tool-btn {
-  padding: 8px;
+  padding: 0;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 7px;
   color: #64748b;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -308,50 +404,71 @@ const updateDrawingStrokeWidth = (width: number) => {
   flex-shrink: 0;
 }
 
+:global(.dark) .tool-btn {
+  color: #94a3b8;
+}
+
 @media (max-width: 768px) {
   .tool-btn {
     width: 32px;
     height: 32px;
     min-width: 32px;
-    padding: 6px;
   }
 }
 
 @media (max-width: 480px) {
   .tool-btn {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-    padding: 4px;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
   }
 }
 
 .tool-btn:hover {
-  background: #e2e8f0;
-  color: #475569;
-  transform: translateY(-1px);
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  transform: scale(1.05);
+}
+
+:global(.dark) .tool-btn:hover {
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
 }
 
 .tool-btn.active {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transform: scale(1.05);
+}
+
+:global(.dark) .tool-btn.active {
+  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.6);
 }
 
 .tool-btn.active:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+}
+
+:global(.dark) .tool-btn.active:hover {
+  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.7);
 }
 
 .tool-btn svg {
   pointer-events: none;
+  transition: transform 0.2s ease;
 }
 
-/* Drawing Style Controls */
+.tool-btn:active svg {
+  transform: scale(0.95);
+}
+
 .drawing-styles {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  padding: 0 4px;
 }
 
 .style-control {
@@ -361,30 +478,47 @@ const updateDrawingStrokeWidth = (width: number) => {
 }
 
 .style-control label {
-  font-size: 12px;
+  font-size: 11px;
   color: #64748b;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: color 0.3s ease;
+}
+
+:global(.dark) .style-control label {
+  color: #94a3b8;
 }
 
 .color-picker {
   width: 36px;
   height: 36px;
-  border: 2px solid #e2e8f0;
-  border-radius: 6px;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 7px;
   cursor: pointer;
   background: none;
   padding: 0;
   overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+:global(.dark) .color-picker {
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .color-picker:hover {
-  border-color: #cbd5e1;
+  border-color: #3b82f6;
+  transform: scale(1.05);
+}
+
+:global(.dark) .color-picker:hover {
+  border-color: #8b5cf6;
 }
 
 .stroke-width-options {
   display: flex;
-  gap: 4px;
+  gap: 2px;
 }
 
 .stroke-btn {
@@ -393,31 +527,57 @@ const updateDrawingStrokeWidth = (width: number) => {
   justify-content: center;
   width: 36px;
   height: 36px;
-  border: 2px solid #e2e8f0;
-  border-radius: 6px;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+  border-radius: 7px;
   background: white;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+}
+
+:global(.dark) .stroke-btn {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .stroke-btn:hover {
-  border-color: #cbd5e1;
-  background: #f8fafc;
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+  transform: scale(1.05);
+}
+
+:global(.dark) .stroke-btn:hover {
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.15);
 }
 
 .stroke-btn.active {
-  border-color: #3b82f6;
-  background: #dbeafe;
+  border-color: #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+:global(.dark) .stroke-btn.active {
+  border-color: #818cf8;
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.2) 0%, rgba(167, 139, 250, 0.2) 100%);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
 }
 
 .stroke-preview {
   width: 20px;
   background: #64748b;
   border-radius: 2px;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+}
+
+:global(.dark) .stroke-preview {
+  background: #94a3b8;
 }
 
 .stroke-btn.active .stroke-preview {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+:global(.dark) .stroke-btn.active .stroke-preview {
+  background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
 }
 </style>
