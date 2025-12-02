@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { debounce } from '../utils/debounce'
 import { rotatePoint, normalizeRotation } from '../utils/rotation'
 
-export type Tool = 'select' | 'rectangle' | 'circle' | 'text' | 'arrow' | 'pencil'
+export type Tool = 'select' | 'rectangle' | 'circle' | 'text' | 'arrow' | 'pencil' | 'sticker'
 
 const isDarkMode = () => document.documentElement.classList.contains('dark')
 
@@ -28,7 +28,7 @@ const getDefaultDrawingColor = () => {
 
 export interface Shape {
   id: string
-  type: 'rectangle' | 'circle' | 'text'
+  type: 'rectangle' | 'circle' | 'text' | 'sticker'
   x: number
   y: number
   width: number
@@ -41,6 +41,9 @@ export interface Shape {
   strokeWidth?: number
   rotation?: number
   createdAt?: number
+  // Sticker-specific properties
+  stickerColor?: 'yellow' | 'red' | 'blue' | 'green'
+  emoji?: string
 }
 
 export interface Arrow {

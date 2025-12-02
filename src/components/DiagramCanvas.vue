@@ -118,12 +118,16 @@
         :stroke-width="selectedArrow?.strokeWidth || selectedDrawingPath?.strokeWidth || 1"
         :rotation="selectedShape?.rotation || selectedArrow?.rotation || selectedDrawingPath?.rotation || 0"
         :rotation-disabled="isRotationDisabled"
+        :sticker-color="selectedShape?.stickerColor"
+        :selected-emoji="selectedShape?.emoji"
         @close="hidePropertiesPanel"
         @update:font-size="updateSelectedFontSize"
         @update:fill="updateSelectedFill"
         @update:stroke="updateSelectedStroke"
         @update:stroke-width="updateSelectedStrokeWidth"
         @update:rotation="updateSelectedRotation"
+        @update:sticker-color="updateStickerColor"
+        @update:emoji="updateStickerEmoji"
       />
   </div>
 </template>
@@ -828,7 +832,9 @@ const startTextEdit = (shape: Shape) => {
 
 const selectedElementType = computed(() => {
   if (diagramStore.selectedShape) {
-    return diagramStore.selectedShape.type === 'text' ? 'text' : 'shape'
+    if (diagramStore.selectedShape.type === 'text') return 'text'
+    if (diagramStore.selectedShape.type === 'sticker') return 'sticker'
+    return 'shape'
   }
   if (diagramStore.selectedArrow) {
     return 'arrow'
@@ -841,13 +847,13 @@ const selectedElementType = computed(() => {
 
 const shouldShowTextControls = computed(() => {
   if (!diagramStore.selectedShape) return false
-  return diagramStore.selectedShape.type === 'text' || 
+  return diagramStore.selectedShape.type === 'text' || diagramStore.selectedShape.type === 'sticker' ||
          Boolean(diagramStore.selectedShape.text && diagramStore.selectedShape.text.trim())
 })
 
 const shouldShowShapeControls = computed(() => {
   if (!diagramStore.selectedShape) return false
-  return diagramStore.selectedShape.type !== 'text'
+  return diagramStore.selectedShape.type !== 'text' && diagramStore.selectedShape.type !== 'sticker'
 })
 
 const selectedShape = computed(() => diagramStore.selectedShape)
@@ -1051,6 +1057,35 @@ const updateSelectedRotation = (rotation: number) => {
   selection.selectedDrawingPathIds.value.forEach(pathId => {
     diagramStore.setElementRotation('drawingPath', pathId, rotation)
   })
+}
+
+const updateStickerColor = (color: string) => {
+  if (diagramStore.selectedShape && diagramStore.selectedShape.type === 'sticker') {
+    const shape = diagramStore.shapes.find(s => s.id === diagramStore.selectedShape?.id)
+    if (shape) {
+      shape.stickerColor = color as 'yellow' | 'red' | 'blue' | 'green'
+      // Update the fill color to match
+      const colors = {
+        yellow: '#fef08a',
+        red: '#fca5a5',
+        blue: '#93c5fd',
+        green: '#86efac'
+      }
+      shape.fill = colors[color as keyof typeof colors]
+      shape.stroke = colors[color as keyof typeof colors]
+      diagramStore.saveToLocalStorage()
+    }
+  }
+}
+
+const updateStickerEmoji = (emoji: string) => {
+  if (diagramStore.selectedShape && diagramStore.selectedShape.type === 'sticker') {
+    const shape = diagramStore.shapes.find(s => s.id === diagramStore.selectedShape?.id)
+    if (shape) {
+      shape.emoji = emoji
+      diagramStore.saveToLocalStorage()
+    }
+  }
 }
 
 const finishTextEdit = () => {

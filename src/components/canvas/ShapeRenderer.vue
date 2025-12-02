@@ -79,6 +79,67 @@
       {{ shape.text }}
     </text>
     
+    <!-- Sticker -->
+    <g v-if="shape.type === 'sticker'">
+      <!-- Sticker background with selection outline -->
+      <rect
+        v-if="isSelected"
+        :x="shape.x - Math.max(1, 2 / props.zoom)"
+        :y="shape.y - Math.max(1, 2 / props.zoom)"
+        :width="shape.width + Math.max(2, 4 / props.zoom)"
+        :height="shape.height + Math.max(2, 4 / props.zoom)"
+        fill="none"
+        stroke="#0078d4"
+        :stroke-width="Math.max(1, 2 / props.zoom)"
+        :stroke-dasharray="`${Math.max(2, 4 / props.zoom)},${Math.max(2, 4 / props.zoom)}`"
+        :rx="Math.max(2, 4 / props.zoom)"
+      />
+      
+      <!-- Sticker background -->
+      <rect
+        :x="shape.x"
+        :y="shape.y"
+        :width="shape.width"
+        :height="shape.height"
+        :fill="getStickerColor(shape)"
+        :stroke="isSelected ? '#0078d4' : 'none'"
+        :stroke-width="isSelected ? Math.max(1, 2 / props.zoom) : 0"
+        :rx="Math.max(2, 4 / props.zoom)"
+        @click="$emit('select', shape, $event)"
+        @dblclick="$emit('editText', shape)"
+        style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1))"
+      />
+      
+      <!-- Sticker text -->
+      <text
+        :x="shape.x + shape.width / 2"
+        :y="shape.y + shape.height / 2 - Math.max(8, 12 / props.zoom)"
+        :fill="isSelected ? '#0078d4' : getStickerTextColor(shape)"
+        :font-size="shape.fontSize ?? 14"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        @click="$emit('select', shape, $event)"
+        @dblclick="$emit('editText', shape)"
+        class="shape-text"
+        style="font-weight: 600;"
+      >
+        {{ shape.text || 'Note' }}
+      </text>
+      
+      <!-- Emoji in bottom-left corner -->
+      <text
+        :x="shape.x + Math.max(12, 20 / props.zoom)"
+        :y="shape.y + shape.height - Math.max(12, 20 / props.zoom)"
+        :font-size="Math.max(16, 24 / props.zoom)"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        @click="$emit('select', shape, $event)"
+        style="pointer-events: none; user-select: none;"
+      >
+        {{ shape.emoji || '📌' }}
+      </text>
+    </g>
+    
     <!-- Rotation Handle -->
     <g v-if="isSelected">
       <line
@@ -168,6 +229,26 @@ const getTextColor = computed(() => {
   // For shapes, we don't have a separate text color property, so just use theme default
   return theme.value === 'dark' ? '#e2e8f0' : '#000000'
 })
+
+const getStickerColor = (shape: Shape) => {
+  const colors = {
+    yellow: '#fef08a',
+    red: '#fca5a5',
+    blue: '#93c5fd',
+    green: '#86efac'
+  }
+  return colors[shape.stickerColor || 'yellow']
+}
+
+const getStickerTextColor = (shape: Shape) => {
+  const colors = {
+    yellow: '#854d0e',
+    red: '#7f1d1d',
+    blue: '#1e3a8a',
+    green: '#14532d'
+  }
+  return colors[shape.stickerColor || 'yellow']
+}
 
 const getShapeTransform = (shape: Shape) => {
   if (!shape.rotation) return ''

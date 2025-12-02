@@ -9,7 +9,7 @@ export function useGeometry() {
       const shape = diagramStore.shapes[i]
       if (!shape) continue
       
-      if (shape.type === 'rectangle') {
+      if (shape.type === 'rectangle' || shape.type === 'sticker') {
         if (isPointInRect(x, y, shape.x, shape.y, shape.width, shape.height)) {
           return shape
         }

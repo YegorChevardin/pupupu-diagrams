@@ -123,8 +123,8 @@ export function useDrawing() {
       let width = Math.abs(worldPos.x - startPoint.value.x)
       let height = Math.abs(worldPos.y - startPoint.value.y)
       
-      // If Shift is pressed, constrain to equal dimensions
-      if (isShiftPressed.value) {
+      // Stickers are always square, or if Shift is pressed, constrain to equal dimensions
+      if (isShiftPressed.value || diagramStore.tool === 'sticker') {
         const size = Math.max(width, height)
         width = size
         height = size
@@ -136,7 +136,7 @@ export function useDrawing() {
         const directionY = worldPos.y >= startPoint.value.y ? 1 : -1
         
         let x, y
-        if (isShiftPressed.value) {
+        if (isShiftPressed.value || diagramStore.tool === 'sticker') {
           // For constrained shapes, adjust position based on drag direction
           x = directionX > 0 ? startPoint.value.x : startPoint.value.x - width
           y = directionY > 0 ? startPoint.value.y : startPoint.value.y - height
@@ -150,7 +150,7 @@ export function useDrawing() {
           y,
           width,
           height,
-          type: diagramStore.tool as 'rectangle' | 'circle' | 'text'
+          type: diagramStore.tool as 'rectangle' | 'circle' | 'text' | 'sticker'
         }
         
         if (diagramStore.tool === 'text') {
@@ -166,6 +166,21 @@ export function useDrawing() {
             strokeWidth: 0
           }
           diagramStore.addShape(newShape)
+        } else if (diagramStore.tool === 'sticker') {
+          const baseFontSize = 14
+          const fixedFontSize = Math.max(8, Math.min(72, baseFontSize / zoom))
+          
+          const newSticker = {
+            ...shapeData,
+            text: '',
+            fontSize: fixedFontSize,
+            stickerColor: 'yellow' as const,
+            emoji: '📌',
+            fill: '#fef08a', // yellow default
+            stroke: '#fef08a',
+            strokeWidth: 0
+          }
+          diagramStore.addShape(newSticker)
         } else {
           const baseFontSize = 14
           const fixedFontSize = Math.max(8, Math.min(72, baseFontSize / zoom))

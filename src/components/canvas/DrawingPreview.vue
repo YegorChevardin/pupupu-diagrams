@@ -46,6 +46,19 @@
       stroke-linejoin="round"
       opacity="0.7"
     />
+    
+    <rect
+      v-if="tool === 'sticker'"
+      :x="getStickerPreview().x"
+      :y="getStickerPreview().y"
+      :width="getStickerPreview().size"
+      :height="getStickerPreview().size"
+      fill="rgba(254, 240, 138, 0.6)"
+      stroke="#fbbf24"
+      :stroke-width="Math.max(1, 2 / zoom)"
+      :stroke-dasharray="`${Math.max(3, 5 / zoom)},${Math.max(3, 5 / zoom)}`"
+      :rx="Math.max(2, 4 / zoom)"
+    />
   </g>
 </template>
 
@@ -118,6 +131,21 @@ const getEllipsePreview = () => {
     rx: width / 2, 
     ry: height / 2 
   }
+}
+
+const getStickerPreview = () => {
+  const size = Math.max(
+    Math.abs(props.currentPoint.x - props.startPoint.x),
+    Math.abs(props.currentPoint.y - props.startPoint.y)
+  )
+  
+  const directionX = props.currentPoint.x >= props.startPoint.x ? 1 : -1
+  const directionY = props.currentPoint.y >= props.startPoint.y ? 1 : -1
+  
+  const x = directionX > 0 ? props.startPoint.x : props.startPoint.x - size
+  const y = directionY > 0 ? props.startPoint.y : props.startPoint.y - size
+  
+  return { x, y, size }
 }
 
 const getPencilPreviewPath = () => {

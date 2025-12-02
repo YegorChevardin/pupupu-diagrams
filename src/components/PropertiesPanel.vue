@@ -35,6 +35,38 @@
         </div>
       </div>
       
+      <!-- Sticker Properties -->
+      <div v-if="elementType === 'sticker'" class="property-group">
+        <label class="property-label">Sticker Color</label>
+        <div class="color-options">
+          <div
+            v-for="color in stickerColors"
+            :key="color.name"
+            class="color-option"
+            :class="{ active: stickerColor === color.name }"
+            :style="{ backgroundColor: color.value }"
+            @click="$emit('update:stickerColor', color.name)"
+          >
+            <span class="color-label">{{ color.label }}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div v-if="elementType === 'sticker'" class="property-group">
+        <label class="property-label">Emoji</label>
+        <div class="emoji-options">
+          <button
+            v-for="emoji in emojis"
+            :key="emoji"
+            class="emoji-option"
+            :class="{ active: selectedEmoji === emoji }"
+            @click="$emit('update:emoji', emoji)"
+          >
+            {{ emoji }}
+          </button>
+        </div>
+      </div>
+      
       <!-- Rotation Controls (for all elements) -->
       <div v-if="elementType !== null" class="property-group">
         <label class="property-label">Rotation</label>
@@ -141,7 +173,7 @@ import { computed } from 'vue'
 interface Props {
   visible: boolean
   position: { x: number; y: number }
-  elementType: 'text' | 'shape' | 'arrow' | 'drawingPath' | null
+  elementType: 'text' | 'shape' | 'arrow' | 'drawingPath' | 'sticker' | null
   showTextControls?: boolean
   showShapeControls?: boolean
   fontSize?: number
@@ -150,6 +182,8 @@ interface Props {
   strokeWidth?: number
   rotation?: number
   rotationDisabled?: boolean
+  stickerColor?: string
+  selectedEmoji?: string
 }
 
 interface Emits {
@@ -159,6 +193,8 @@ interface Emits {
   (e: 'update:stroke', color: string): void
   (e: 'update:strokeWidth', width: number): void
   (e: 'update:rotation', rotation: number): void
+  (e: 'update:stickerColor', color: string): void
+  (e: 'update:emoji', emoji: string): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -179,6 +215,7 @@ const title = computed(() => {
     case 'text': return 'Text Properties'
     case 'shape': return 'Shape Properties'
     case 'arrow': return 'Arrow Properties'
+    case 'sticker': return 'Sticker Properties'
     default: return 'Properties'
   }
 })
@@ -203,6 +240,15 @@ const arrowColors = [
   '#ff9ff3',
   '#54a0ff'
 ]
+
+const stickerColors = [
+  { name: 'yellow', value: '#fef08a', label: 'Y' },
+  { name: 'red', value: '#fca5a5', label: 'R' },
+  { name: 'blue', value: '#93c5fd', label: 'B' },
+  { name: 'green', value: '#86efac', label: 'G' }
+]
+
+const emojis = ['📌', '⭐', '💡', '🎯', '✅', '❗', '💭', '🔥', '👍', '📝', '🎨', '🚀']
 
 const increaseFontSize = () => {
   const newSize = Math.min(72, props.fontSize + 2)
@@ -516,5 +562,65 @@ const decreaseFontSize = () => {
 :global(.dark) .rotation-input.disabled {
   background-color: #1e293b;
   color: #64748b;
+}
+
+.color-label {
+  font-size: 10px;
+  font-weight: bold;
+  color: rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+:global(.dark) .color-label {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.emoji-options {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.emoji-option {
+  width: 32px;
+  height: 32px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+:global(.dark) .emoji-option {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.emoji-option:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+  transform: scale(1.1);
+}
+
+:global(.dark) .emoji-option:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: #8b5cf6;
+}
+
+.emoji-option.active {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+  transform: scale(1.05);
+}
+
+:global(.dark) .emoji-option.active {
+  border-color: #818cf8;
+  background: rgba(129, 140, 248, 0.2);
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.4);
 }
 </style>
