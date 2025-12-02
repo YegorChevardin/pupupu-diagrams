@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useDiagramStore, type Shape, type Arrow, type DrawingPath } from '../stores/diagram'
 
 export function useDrawing() {
@@ -8,6 +8,29 @@ export function useDrawing() {
   const startPoint = ref({ x: 0, y: 0 })
   const currentPoint = ref({ x: 0, y: 0 })
   const pencilPoints = ref<Array<{ x: number, y: number }>>([])
+  const isShiftPressed = ref(false)
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Shift') {
+      isShiftPressed.value = true
+    }
+  }
+
+  const handleKeyUp = (e: KeyboardEvent) => {
+    if (e.key === 'Shift') {
+      isShiftPressed.value = false
+    }
+  }
+
+  onMounted(() => {
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+  })
+
+  onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeyDown)
+    window.removeEventListener('keyup', handleKeyUp)
+  })
 
   const startDrawing = (worldPos: { x: number; y: number }) => {
     isDrawing.value = true
@@ -97,13 +120,34 @@ export function useDrawing() {
         diagramStore.addArrow(arrowData)
       }
     } else {
-      const width = Math.abs(worldPos.x - startPoint.value.x)
-      const height = Math.abs(worldPos.y - startPoint.value.y)
+      let width = Math.abs(worldPos.x - startPoint.value.x)
+      let height = Math.abs(worldPos.y - startPoint.value.y)
+      
+      // If Shift is pressed, constrain to equal dimensions
+      if (isShiftPressed.value) {
+        const size = Math.max(width, height)
+        width = size
+        height = size
+      }
       
       if (width > 10 / zoom && height > 10 / zoom) {
+        // Calculate the correct position based on the direction of the drag
+        const directionX = worldPos.x >= startPoint.value.x ? 1 : -1
+        const directionY = worldPos.y >= startPoint.value.y ? 1 : -1
+        
+        let x, y
+        if (isShiftPressed.value) {
+          // For constrained shapes, adjust position based on drag direction
+          x = directionX > 0 ? startPoint.value.x : startPoint.value.x - width
+          y = directionY > 0 ? startPoint.value.y : startPoint.value.y - height
+        } else {
+          x = Math.min(startPoint.value.x, worldPos.x)
+          y = Math.min(startPoint.value.y, worldPos.y)
+        }
+        
         const shapeData = {
-          x: Math.min(startPoint.value.x, worldPos.x),
-          y: Math.min(startPoint.value.y, worldPos.y),
+          x,
+          y,
           width,
           height,
           type: diagramStore.tool as 'rectangle' | 'circle' | 'text'
@@ -145,6 +189,7 @@ export function useDrawing() {
     startPoint,
     currentPoint,
     pencilPoints,
+    isShiftPressed,
     startDrawing,
     updateDrawing,
     completeDrawing

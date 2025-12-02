@@ -77,6 +77,7 @@
           :current-point="drawing.currentPoint.value"
           :pencil-points="drawing.pencilPoints.value"
           :zoom="canvasInteraction.zoom.value"
+          :is-shift-pressed="drawing.isShiftPressed.value"
         />
         
         <SelectionHandles
