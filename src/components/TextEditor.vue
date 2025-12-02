@@ -22,19 +22,19 @@
     
     <!-- Font size controls -->
     <g :transform="`translate(${position.x + width/2 + 10}, ${position.y - height/2})`">
-      <rect x="0" y="0" width="80" height="35" fill="white" stroke="#ddd" rx="4" stroke-width="1"/>
-      <text x="5" y="12" font-size="9" fill="#666">Font Size</text>
+      <rect x="0" y="0" width="80" height="35" class="font-controls-bg" rx="4" stroke-width="1"/>
+      <text x="5" y="12" font-size="9" class="font-label">Font Size</text>
       
       <!-- Decrease button -->
-      <circle cx="15" cy="23" r="6" fill="#f8f9fa" stroke="#dee2e6" class="font-btn" @click="decreaseSize"/>
-      <text x="15" y="26" font-size="8" text-anchor="middle" fill="#495057">−</text>
+      <circle cx="15" cy="23" r="6" class="font-btn font-btn-circle" @click="decreaseSize"/>
+      <text x="15" y="26" font-size="8" text-anchor="middle" class="font-btn-text">−</text>
       
       <!-- Size display -->
-      <text x="40" y="26" font-size="10" text-anchor="middle" fill="#495057">{{ fontSize }}</text>
+      <text x="40" y="26" font-size="10" text-anchor="middle" class="font-size-display">{{ fontSize }}</text>
       
       <!-- Increase button -->
-      <circle cx="65" cy="23" r="6" fill="#f8f9fa" stroke="#dee2e6" class="font-btn" @click="increaseSize"/>
-      <text x="65" y="26" font-size="8" text-anchor="middle" fill="#495057">+</text>
+      <circle cx="65" cy="23" r="6" class="font-btn font-btn-circle" @click="increaseSize"/>
+      <text x="65" y="26" font-size="8" text-anchor="middle" class="font-btn-text">+</text>
     </g>
   </g>
 </template>
@@ -135,28 +135,77 @@ const increaseSize = () => {
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4), 0 0 0 3px rgba(129, 140, 248, 0.2);
 }
 
+.font-controls-bg {
+  fill: white;
+  stroke: #ddd;
+}
+
+:global(.dark) .font-controls-bg {
+  fill: #1e293b;
+  stroke: #475569;
+}
+
+.font-label {
+  fill: #666;
+}
+
+:global(.dark) .font-label {
+  fill: #94a3b8;
+}
+
 .font-btn {
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.font-btn:hover {
+.font-btn-circle {
+  fill: #f8f9fa;
+  stroke: #dee2e6;
+}
+
+:global(.dark) .font-btn-circle {
+  fill: #334155;
+  stroke: #475569;
+}
+
+.font-btn-text {
+  fill: #495057;
+  pointer-events: none;
+}
+
+:global(.dark) .font-btn-text {
+  fill: #cbd5e1;
+}
+
+.font-size-display {
+  fill: #495057;
+}
+
+:global(.dark) .font-size-display {
+  fill: #e2e8f0;
+}
+
+.font-btn:hover .font-btn-circle,
+.font-btn-circle:hover {
   fill: rgba(102, 126, 234, 0.1);
   stroke: #667eea;
 }
 
-:global(.dark) .font-btn:hover {
+:global(.dark) .font-btn:hover .font-btn-circle,
+:global(.dark) .font-btn-circle:hover {
   fill: rgba(139, 92, 246, 0.2);
   stroke: #818cf8;
 }
 
-.font-btn:active {
+.font-btn:active .font-btn-circle,
+.font-btn-circle:active {
   fill: rgba(102, 126, 234, 0.2);
   stroke: #764ba2;
   transform: scale(0.95);
 }
 
-:global(.dark) .font-btn:active {
+:global(.dark) .font-btn:active .font-btn-circle,
+:global(.dark) .font-btn-circle:active {
   fill: rgba(139, 92, 246, 0.3);
   stroke: #a78bfa;
 }

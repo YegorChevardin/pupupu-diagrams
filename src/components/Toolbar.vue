@@ -78,12 +78,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h } from 'vue'
+import { ref, h, watch } from 'vue'
 import { useDiagramStore, type Tool } from '../stores/diagram.js'
 import { useTheme } from '../composables/useTheme'
 
 const diagramStore = useDiagramStore()
 const { theme, toggleTheme } = useTheme()
+
+// Update drawing color when theme changes
+watch(theme, (newTheme) => {
+  const defaultColor = newTheme === 'dark' ? '#e2e8f0' : '#000000'
+  diagramStore.setDrawingColor(defaultColor)
+})
 
 const fileInput = ref<HTMLInputElement>()
 

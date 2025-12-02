@@ -7,7 +7,7 @@
       :y1="arrow.startY"
       :x2="arrow.endX"
       :y2="arrow.endY"
-      :stroke="isSelected ? '#0078d4' : (arrow.stroke || '#000000')"
+      :stroke="isSelected ? '#0078d4' : getArrowColor"
       :stroke-width="isSelected ? Math.max(1.5, 3 / props.zoom) : Math.max(0.5, (arrow.strokeWidth || 1) / props.zoom)"
       :marker-end="isSelected ? 'url(#arrowhead-selected)' : getArrowMarker(arrow.stroke)"
       @click.stop="$emit('select', arrow, $event)"
@@ -22,7 +22,7 @@
       v-if="arrow.isCurved && arrow.controlPoints"
       :d="generateCurvePath()"
       fill="none"
-      :stroke="isSelected ? '#0078d4' : (arrow.stroke || '#000000')"
+      :stroke="isSelected ? '#0078d4' : getArrowColor"
       :stroke-width="isSelected ? Math.max(1.5, 3 / props.zoom) : Math.max(0.5, (arrow.strokeWidth || 1) / props.zoom)"
       stroke-dasharray="5,5"
       :marker-end="isSelected ? 'url(#arrowhead-selected)' : getArrowMarker(arrow.stroke)"
@@ -100,6 +100,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useDiagramStore, type Arrow } from '../../stores/diagram'
+import { useTheme } from '../../composables/useTheme'
 import ArrowControlPoints from '../ArrowControlPoints.vue'
 
 const diagramStore = useDiagramStore()
@@ -122,6 +123,24 @@ const emit = defineEmits<{
 }>()
 
 const isHoveringHandle = ref(false)
+
+const { theme } = useTheme()
+
+// Check if arrow color should adapt to theme (black, white, or theme defaults)
+const isThemeDependentColor = (color?: string) => {
+  if (!color) return true
+  const normalized = color.toLowerCase()
+  return normalized === '#000000' || normalized === 'black' ||
+         normalized === '#ffffff' || normalized === 'white' ||
+         normalized === '#e2e8f0' // dark mode default
+}
+
+const getArrowColor = computed(() => {
+  if (isThemeDependentColor(props.arrow.stroke)) {
+    return theme.value === 'dark' ? '#e2e8f0' : '#000000'
+  }
+  return props.arrow.stroke || (theme.value === 'dark' ? '#e2e8f0' : '#000000')
+})
 
 const handleDragStart = (endpoint: 'start' | 'end', event: MouseEvent) => {
   event.preventDefault()

@@ -113,8 +113,8 @@
         :show-text-controls="shouldShowTextControls"
         :show-shape-controls="shouldShowShapeControls"
         :font-size="currentFontSizeForPanel"
-        :selected-fill="selectedShape?.fill || 'white'"
-        :selected-stroke="selectedArrow?.stroke || selectedDrawingPath?.stroke || '#000000'"
+        :selected-fill="selectedFillColor"
+        :selected-stroke="selectedStrokeColor"
         :stroke-width="selectedArrow?.strokeWidth || selectedDrawingPath?.strokeWidth || 1"
         :rotation="selectedShape?.rotation || selectedArrow?.rotation || selectedDrawingPath?.rotation || 0"
         :rotation-disabled="isRotationDisabled"
@@ -853,6 +853,24 @@ const shouldShowShapeControls = computed(() => {
 const selectedShape = computed(() => diagramStore.selectedShape)
 const selectedArrow = computed(() => diagramStore.selectedArrow)
 const selectedDrawingPath = computed(() => diagramStore.selectedDrawingPath)
+
+// Reactive computed properties for colors to ensure UI updates
+const selectedFillColor = computed(() => {
+  const shape = diagramStore.shapes.find(s => s.id === diagramStore.selectedShape?.id)
+  return shape?.fill || 'white'
+})
+
+const selectedStrokeColor = computed(() => {
+  if (diagramStore.selectedArrow) {
+    const arrow = diagramStore.arrows.find(a => a.id === diagramStore.selectedArrow?.id)
+    return arrow?.stroke || '#000000'
+  }
+  if (diagramStore.selectedDrawingPath) {
+    const path = diagramStore.drawingPaths.find(p => p.id === diagramStore.selectedDrawingPath?.id)
+    return path?.stroke || '#000000'
+  }
+  return '#000000'
+})
 
 const selectedShapeForHandles = computed(() => {
   if (!diagramStore.selectedShape) return null

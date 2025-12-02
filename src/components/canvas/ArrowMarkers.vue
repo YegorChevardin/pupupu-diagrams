@@ -9,7 +9,7 @@
       orient="auto"
       markerUnits="userSpaceOnUse"
     >
-      <polygon :points="markerPoints" fill="#000000" />
+      <polygon :points="markerPoints" :fill="defaultArrowColor" />
     </marker>
     
     <marker
@@ -124,6 +124,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useTheme } from '../../composables/useTheme'
 
 interface Props {
   zoom?: number
@@ -131,6 +132,13 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   zoom: 1
+})
+
+const { theme } = useTheme()
+
+// Default arrow color based on theme
+const defaultArrowColor = computed(() => {
+  return theme.value === 'dark' ? '#e2e8f0' : '#000000'
 })
 
 // Calculate zoom-independent marker size

@@ -4,7 +4,7 @@
     <path
       :d="pathData"
       fill="none"
-      :stroke="isSelected ? '#0078d4' : (drawingPath.stroke || '#000000')"
+      :stroke="isSelected ? '#0078d4' : getDrawingPathColor"
       :stroke-width="isSelected ? Math.max(1.5, 3 / zoom) : Math.max(0.5, (drawingPath.strokeWidth || 2) / zoom)"
       stroke-linecap="round"
       stroke-linejoin="round"
@@ -100,6 +100,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useDiagramStore, type DrawingPath } from '../../stores/diagram'
+import { useTheme } from '../../composables/useTheme'
 
 const diagramStore = useDiagramStore()
 
@@ -119,6 +120,24 @@ const emit = defineEmits<{
   startResize: [drawingPath: DrawingPath, handle: string, event: MouseEvent]
   startRotate: [drawingPath: DrawingPath, event: MouseEvent]
 }>()
+
+const { theme } = useTheme()
+
+// Check if drawing path color should adapt to theme (black, white, or theme defaults)
+const isThemeDependentColor = (color?: string) => {
+  if (!color) return true
+  const normalized = color.toLowerCase()
+  return normalized === '#000000' || normalized === 'black' ||
+         normalized === '#ffffff' || normalized === 'white' ||
+         normalized === '#e2e8f0' // dark mode default
+}
+
+const getDrawingPathColor = computed(() => {
+  if (isThemeDependentColor(props.drawingPath.stroke)) {
+    return theme.value === 'dark' ? '#e2e8f0' : '#000000'
+  }
+  return props.drawingPath.stroke || (theme.value === 'dark' ? '#e2e8f0' : '#000000')
+})
 
 const handlePathClick = (event: MouseEvent) => {
   if (diagramStore.tool === 'select') {

@@ -172,8 +172,6 @@ export function useDrawing() {
           const shapeWithProps = {
             ...shapeData,
             fontSize: fixedFontSize,
-            fill: 'white',
-            stroke: '#cccccc',
             strokeWidth: 1
           }
           diagramStore.addShape(shapeWithProps)

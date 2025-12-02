@@ -1,9 +1,30 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { debounce } from '../utils/debounce'
 import { rotatePoint, normalizeRotation } from '../utils/rotation'
 
 export type Tool = 'select' | 'rectangle' | 'circle' | 'text' | 'arrow' | 'pencil'
+
+const isDarkMode = () => document.documentElement.classList.contains('dark')
+
+const getDefaultShapeColors = () => {
+  if (isDarkMode()) {
+    return {
+      fill: '#1e293b',
+      stroke: '#475569',
+      textColor: '#e2e8f0'
+    }
+  }
+  return {
+    fill: '#ffffff',
+    stroke: '#cccccc',
+    textColor: '#000000'
+  }
+}
+
+const getDefaultDrawingColor = () => {
+  return isDarkMode() ? '#e2e8f0' : '#000000'
+}
 
 export interface Shape {
   id: string
@@ -67,7 +88,7 @@ export const useDiagramStore = defineStore('diagram', () => {
   const selectedDrawingPath = ref<DrawingPath | null>(null)
   const tool = ref<Tool>('select')
   
-  const currentDrawingColor = ref<string>('#000000')
+  const currentDrawingColor = ref<string>(getDefaultDrawingColor())
   const currentDrawingStrokeWidth = ref<number>(2)
   
   const connectionState = ref<{
