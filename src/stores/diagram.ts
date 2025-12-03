@@ -553,6 +553,14 @@ export const useDiagramStore = defineStore('diagram', () => {
     selectedDrawingPath.value = null
     saveToLocalStorage()
   }
+
+  const exportDiagram = () => {
+    return {
+      shapes: shapes.value,
+      arrows: arrows.value,
+      drawingPaths: drawingPaths.value
+    }
+  }
   
   const updateShapeText = (shapeId: string, text: string) => {
     const shape = shapes.value.find(s => s.id === shapeId)
@@ -815,6 +823,7 @@ export const useDiagramStore = defineStore('diagram', () => {
     deleteSelected,
     clearCanvas,
     loadDiagram,
+    exportDiagram,
     updateShapeText,
     saveToLocalStorage,
     loadFromLocalStorage,

@@ -3,11 +3,20 @@ import { onMounted } from 'vue'
 import DiagramCanvas from './components/DiagramCanvas.vue'
 import Toolbar from './components/Toolbar.vue'
 import { useTheme } from './composables/useTheme'
+import { useDiagramStore } from './stores/diagram'
+import { decodeDiagramFromUrl, clearUrlHash } from './utils/urlSharing'
 
 const { loadTheme } = useTheme()
+const diagramStore = useDiagramStore()
 
 onMounted(() => {
   loadTheme()
+  
+  const urlDiagram = decodeDiagramFromUrl()
+  if (urlDiagram) {
+    diagramStore.loadDiagram(urlDiagram)
+    clearUrlHash()
+  }
 })
 </script>
 

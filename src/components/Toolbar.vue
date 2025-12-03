@@ -56,6 +56,9 @@
     <div class="divider"></div>
     
     <div class="tool-group secondary">
+      <button class="tool-btn" @click="shareLink" title="Share Diagram Link">
+        <ShareIcon />
+      </button>
       <button class="tool-btn" @click="clearCanvas" title="Clear All">
         <TrashIcon />
       </button>
@@ -74,6 +77,11 @@
       </button>
 
     </div>
+    
+    <!-- Share notification -->
+    <div v-if="showShareNotification" class="share-notification">
+      {{ shareNotificationMessage }}
+    </div>
   </div>
 </template>
 
@@ -81,6 +89,7 @@
 import { ref, h, watch } from 'vue'
 import { useDiagramStore, type Tool } from '../stores/diagram.js'
 import { useTheme } from '../composables/useTheme'
+import { encodeDiagramToUrl } from '../utils/urlSharing'
 
 const diagramStore = useDiagramStore()
 const { theme, toggleTheme } = useTheme()
@@ -92,6 +101,8 @@ watch(theme, (newTheme) => {
 })
 
 const fileInput = ref<HTMLInputElement>()
+const showShareNotification = ref(false)
+const shareNotificationMessage = ref('')
 
 const SelectIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2 }, [
   h('path', { d: 'M3 7V5C3 3.89543 3.89543 3 5 3H7' }),
@@ -159,6 +170,14 @@ const SunIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fi
   h('path', { d: 'M21 12H23', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }),
   h('path', { d: 'M4.22 19.78L5.64 18.36', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' }),
   h('path', { d: 'M18.36 5.64L19.78 4.22', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round' })
+])
+
+const ShareIcon = () => h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none' }, [
+  h('circle', { cx: 18, cy: 5, r: 3, stroke: 'currentColor', 'stroke-width': 2 }),
+  h('circle', { cx: 6, cy: 12, r: 3, stroke: 'currentColor', 'stroke-width': 2 }),
+  h('circle', { cx: 18, cy: 19, r: 3, stroke: 'currentColor', 'stroke-width': 2 }),
+  h('path', { d: 'M8.59 13.51L15.42 17.49', stroke: 'currentColor', 'stroke-width': 2 }),
+  h('path', { d: 'M15.41 6.51L8.59 10.49', stroke: 'currentColor', 'stroke-width': 2 })
 ])
 
 const tools = [
@@ -280,6 +299,29 @@ const updateDrawingColor = (event: Event) => {
 
 const updateDrawingStrokeWidth = (width: number) => {
   diagramStore.setDrawingStrokeWidth(width)
+}
+
+const shareLink = async () => {
+  try {
+    const diagramData = diagramStore.exportDiagram()
+    const url = encodeDiagramToUrl(diagramData)
+    
+    await navigator.clipboard.writeText(url)
+    shareNotificationMessage.value = '✓ Link copied to clipboard!'
+    showShareNotification.value = true
+    
+    setTimeout(() => {
+      showShareNotification.value = false
+    }, 3000)
+  } catch (error) {
+    console.error('Failed to share diagram:', error)
+    shareNotificationMessage.value = '✗ Failed to copy link'
+    showShareNotification.value = true
+    
+    setTimeout(() => {
+      showShareNotification.value = false
+    }, 3000)
+  }
 }
 </script>
 
@@ -591,5 +633,40 @@ const updateDrawingStrokeWidth = (width: number) => {
 
 :global(.dark) .stroke-btn.active .stroke-preview {
   background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
+}
+
+.share-notification {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  padding: 12px 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+  pointer-events: none;
+}
+
+:global(.dark) .share-notification {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>
