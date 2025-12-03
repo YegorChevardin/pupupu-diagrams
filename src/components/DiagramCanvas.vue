@@ -1152,6 +1152,14 @@ onMounted(() => {
       diagramStore.shapes.forEach(s => s.selected = true)
       diagramStore.arrows.forEach(a => a.selected = true)
       diagramStore.drawingPaths.forEach(d => d.selected = true)
+    } else if (event.key === 'c' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault()
+      if (diagramStore.selectedShape || diagramStore.selectedArrow || diagramStore.selectedDrawingPath) {
+        diagramStore.copySelected()
+      }
+    } else if (event.key === 'v' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault()
+      diagramStore.pasteClipboard()
     }
   }
   

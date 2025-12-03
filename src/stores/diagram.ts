@@ -99,6 +99,12 @@ export const useDiagramStore = defineStore('diagram', () => {
     startPoint: { x: number, y: number, shapeId: string, dotId: string } | null
   }>({ isConnecting: false, startPoint: null })
   
+  const clipboard = ref<{
+    shapes: Shape[]
+    arrows: Arrow[]
+    drawingPaths: DrawingPath[]
+  }>({ shapes: [], arrows: [], drawingPaths: [] })
+  
   const setTool = (newTool: Tool) => {
     tool.value = newTool
     clearSelection()
@@ -792,6 +798,99 @@ export const useDiagramStore = defineStore('diagram', () => {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
   }
   
+  const copySelected = () => {
+    clipboard.value = {
+      shapes: selectedShape.value ? [selectedShape.value] : [],
+      arrows: selectedArrow.value ? [selectedArrow.value] : [],
+      drawingPaths: selectedDrawingPath.value ? [selectedDrawingPath.value] : []
+    }
+  }
+  
+  const pasteClipboard = () => {
+    if (clipboard.value.shapes.length === 0 && 
+        clipboard.value.arrows.length === 0 && 
+        clipboard.value.drawingPaths.length === 0) {
+      return
+    }
+    
+    clearSelection()
+    
+    const offset = 30
+    
+    // Paste shapes
+    clipboard.value.shapes.forEach(shape => {
+      const newShape: Shape = {
+        ...shape,
+        id: generateId(),
+        x: shape.x + offset,
+        y: shape.y + offset,
+        selected: false,
+        createdAt: Date.now()
+      }
+      shapes.value.push(newShape)
+      selectShape(newShape)
+    })
+    
+    // Paste arrows (always disconnected from shapes)
+    clipboard.value.arrows.forEach(arrow => {
+      const newArrow: Arrow = {
+        ...arrow,
+        id: generateId(),
+        startX: arrow.startX + offset,
+        startY: arrow.startY + offset,
+        endX: arrow.endX + offset,
+        endY: arrow.endY + offset,
+        startShapeId: undefined,
+        endShapeId: undefined,
+        startDotId: undefined,
+        endDotId: undefined,
+        selected: false,
+        createdAt: Date.now()
+      }
+      
+      // Copy control points if present
+      if (newArrow.controlPoints) {
+        newArrow.controlPoints = newArrow.controlPoints.map(cp => ({
+          x: cp.x + offset,
+          y: cp.y + offset,
+          id: generateId()
+        }))
+      }
+      
+      arrows.value.push(newArrow)
+      selectArrow(newArrow)
+    })
+    
+    // Paste drawing paths
+    clipboard.value.drawingPaths.forEach(path => {
+      const newPath: DrawingPath = {
+        ...path,
+        id: generateId(),
+        points: path.points.map(p => ({ x: p.x + offset, y: p.y + offset })),
+        selected: false,
+        createdAt: Date.now(),
+        minX: (path.minX || 0) + offset,
+        minY: (path.minY || 0) + offset,
+        maxX: (path.maxX || 0) + offset,
+        maxY: (path.maxY || 0) + offset
+      }
+      
+      // Update connection points
+      if (newPath.connectionPoints) {
+        newPath.connectionPoints = newPath.connectionPoints.map(cp => ({
+          x: cp.x + offset,
+          y: cp.y + offset,
+          id: cp.id
+        }))
+      }
+      
+      drawingPaths.value.push(newPath)
+      selectDrawingPath(newPath)
+    })
+    
+    saveToLocalStorage()
+  }
+  
   // Load from localStorage on store initialization
   loadFromLocalStorage()
   
@@ -844,6 +943,8 @@ export const useDiagramStore = defineStore('diagram', () => {
     setDrawingColor,
     setDrawingStrokeWidth,
     rotateElement,
-    setElementRotation
+    setElementRotation,
+    copySelected,
+    pasteClipboard
   }
 })
